@@ -1,15 +1,15 @@
 package provider
 
 import (
-	"testing"
 	"context"
-	"io/ioutil"
-	"sync"
 	"github.com/containous/traefik/safe"
 	"github.com/containous/traefik/types"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 	"os"
 	"path"
+	"sync"
+	"testing"
 )
 
 const (

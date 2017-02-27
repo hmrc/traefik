@@ -4,6 +4,7 @@ import (
 	"os"
 	"strings"
 
+	"fmt"
 	"github.com/BurntSushi/toml"
 	"github.com/containous/traefik/log"
 	"github.com/containous/traefik/safe"
@@ -12,7 +13,6 @@ import (
 	"io/ioutil"
 	"path"
 	"time"
-	"fmt"
 )
 
 var _ Provider = (*File)(nil)
@@ -20,7 +20,7 @@ var _ Provider = (*File)(nil)
 // File holds configurations of the File provider.
 type File struct {
 	BaseProvider `mapstructure:",squash"`
-	Directory string `description:"Read config from files in this directory"`
+	Directory    string `description:"Read config from files in this directory"`
 }
 
 // Provide allows the provider to provide configurations to traefik
