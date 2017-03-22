@@ -18,6 +18,7 @@ type Backend struct {
 	LoadBalancer   *LoadBalancer     `json:"loadBalancer,omitempty"`
 	MaxConn        *MaxConn          `json:"maxConn,omitempty"`
 	HealthCheck    *HealthCheck      `json:"healthCheck,omitempty"`
+	AuditTap       *AuditTap         `json:"auditTap,omitempty"`
 }
 
 // MaxConn holds maximum connection configuration
@@ -316,4 +317,20 @@ type AccessLog struct {
 	RequestHeaders            []string `json:"requestHeaders,omitempty" description:"Access log request JSON fields: either a list of names or list of name:replacement tuples"`
 	OriginResponseHeaders     []string `json:"originResponseHeader,omitempty" description:"Access log origin server JSON fields: either a list of names or list of name:replacement tuples"`
 	DownstreamResponseHeaders []string `json:"downstreamResponseHeader,omitempty" description:"Access sent downstream JSON fields: either a list of names or list of name:replacement tuples"`
+}
+
+// AuditTap holds AuditTap configuration
+type AuditTap struct {
+	// HTTP or Kafka endpoint (only one of them is used)
+	//Endpoint string `json:"endpoint,omitempty"`
+	// HTTP method for REST (default: "GET")
+	//Method string `json:"method,omitempty"`
+	// Topic for Kafka (if provided, Kafka replaces REST)
+	//Topic string `json:"topic,omitempty"`
+	// write audit items to this file (optional)
+	//LogFile string `json:"logFile,omitempty"`
+	// output rendering (optional)
+	//Format string `json:"format,omitempty"`
+	// MaxEntityLength truncates entities (bodies) longer than this (units are allowed, eg. 32KiB)
+	MaxEntityLength string `json:"maxEntityLength,omitempty"`
 }
