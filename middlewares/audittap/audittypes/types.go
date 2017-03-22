@@ -1,6 +1,7 @@
-package audittap
+package audittypes
 
 import (
+	"encoding/json"
 	"net/http"
 )
 
@@ -45,6 +46,13 @@ type AuditResponseWriter interface {
 // AuditStream describes a type to which audit summaries can be sent.
 type AuditStream interface {
 	Audit(summary Summary) error
+}
+
+//-------------------------------------------------------------------------------------------------
+
+func (summary Summary) ToJson() Encoded {
+	b, err := json.Marshal(summary)
+	return Encoded{b, err}
 }
 
 //-------------------------------------------------------------------------------------------------

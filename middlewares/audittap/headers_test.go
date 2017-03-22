@@ -1,6 +1,7 @@
 package audittap
 
 import (
+	. "github.com/containous/traefik/middlewares/audittap/audittypes"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"

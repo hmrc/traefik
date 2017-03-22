@@ -1,14 +1,15 @@
 package audittap
 
 import (
+	. "github.com/containous/traefik/middlewares/audittap/audittypes"
+	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
+	"time"
 )
 
 func TestAuditResponseWriter_no_body(t *testing.T) {
-	clock = t0
+	TheClock = T0
 
 	recorder := httptest.NewRecorder()
 	w := NewAuditResponseWriter(recorder, MaximumEntityLength)
@@ -18,7 +19,7 @@ func TestAuditResponseWriter_no_body(t *testing.T) {
 }
 
 func TestAuditResponseWriter_with_body(t *testing.T) {
-	clock = t0
+	TheClock = T0
 
 	recorder := httptest.NewRecorder()
 	w := NewAuditResponseWriter(recorder, MaximumEntityLength)
@@ -30,7 +31,7 @@ func TestAuditResponseWriter_with_body(t *testing.T) {
 }
 
 func TestAuditResponseWriter_headers(t *testing.T) {
-	clock = t0
+	TheClock = T0
 
 	recorder := httptest.NewRecorder()
 	w := NewAuditResponseWriter(recorder, MaximumEntityLength)
@@ -56,10 +57,18 @@ func TestAuditResponseWriter_headers(t *testing.T) {
 			"hdr-content-length": "123",
 			"hdr-request-id":     "abc123",
 			"hdr-cookie":         []string{"a=1", "b=2", "c=3"},
-			CompletedAt:          t0.Now(),
+			CompletedAt:          T0.Now(),
 			Status:               0,
 			Size:                 0,
 			Entity:               []byte{},
 		},
 		w.SummariseResponse())
 }
+
+type fixedClock time.Time
+
+func (c fixedClock) Now() time.Time {
+	return time.Time(c)
+}
+
+var T0 = fixedClock(time.Unix(1000000000, 0))

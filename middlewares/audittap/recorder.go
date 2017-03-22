@@ -3,6 +3,7 @@ package audittap
 import (
 	"bufio"
 	"fmt"
+	. "github.com/containous/traefik/middlewares/audittap/audittypes"
 	"net"
 	"net/http"
 )
@@ -75,7 +76,7 @@ func (r *recorderResponseWriter) SummariseResponse() DataMap {
 		Status:      r.status,
 		Size:        r.size,
 		Entity:      r.entity,
-		CompletedAt: clock.Now(),
+		CompletedAt: TheClock.Now(),
 	}
 	return res.AddAll(DataMap(rhdr))
 }

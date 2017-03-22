@@ -2,6 +2,7 @@ package audittap
 
 import (
 	"bytes"
+	. "github.com/containous/traefik/middlewares/audittap/audittypes"
 	"net/http"
 	"strings"
 )

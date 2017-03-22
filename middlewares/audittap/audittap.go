@@ -1,6 +1,7 @@
 package audittap
 
 import (
+	. "github.com/containous/traefik/middlewares/audittap/audittypes"
 	"github.com/containous/traefik/types"
 	"net/http"
 )
@@ -45,7 +46,7 @@ func (s *AuditTap) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.
 		Path:       r.URL.Path,
 		Query:      r.URL.RawQuery,
 		RemoteAddr: r.RemoteAddr,
-		BeganAt:    clock.Now(),
+		BeganAt:    TheClock.Now(),
 	}
 	req.AddAll(DataMap(rhdr))
 

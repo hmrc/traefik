@@ -1,4 +1,4 @@
-package audittap
+package audittypes
 
 // Encoder describes any type that can be encoded as an array of bytes
 // in order to be sent as the key or value of a Kafka message. Length() is provided as

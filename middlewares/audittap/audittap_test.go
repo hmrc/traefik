@@ -2,21 +2,13 @@ package audittap
 
 import (
 	"fmt"
+	. "github.com/containous/traefik/middlewares/audittap/audittypes"
 	"github.com/containous/traefik/types"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 )
-
-type fixedClock time.Time
-
-func (c fixedClock) Now() time.Time {
-	return time.Time(c)
-}
-
-var t0 = fixedClock(time.Unix(1000000000, 0))
 
 type noopAuditStream struct {
 	events []Summary
@@ -28,7 +20,7 @@ func (as *noopAuditStream) Audit(summary Summary) error {
 }
 
 func TestAuditTap_noop(t *testing.T) {
-	clock = t0
+	TheClock = T0
 
 	capture := &noopAuditStream{}
 	cfg := &types.AuditTap{}
@@ -57,7 +49,7 @@ func TestAuditTap_noop(t *testing.T) {
 				RemoteAddr:       "101.102.103.104:1234",
 				"hdr-request-id": "R123",
 				"hdr-session-id": "S123",
-				BeganAt:          clock.Now(),
+				BeganAt:          TheClock.Now(),
 			},
 			DataMap{
 				Status: 404,
@@ -65,7 +57,7 @@ func TestAuditTap_noop(t *testing.T) {
 				"hdr-content-type":           "text/plain; charset=utf-8",
 				Size:                         19,
 				Entity:                       []byte("404 page not found\n"),
-				CompletedAt:                  clock.Now(),
+				CompletedAt:                  TheClock.Now(),
 			},
 		},
 		capture.events[0])

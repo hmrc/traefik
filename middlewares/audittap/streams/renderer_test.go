@@ -1,6 +1,7 @@
-package audittap
+package streams
 
 import (
+	. "github.com/containous/traefik/middlewares/audittap/audittypes"
 	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
@@ -27,7 +28,7 @@ func testData(t time.Time) Summary {
 }
 
 func TestDirectJSONRenderer(t *testing.T) {
-	enc := DirectJSONRenderer(testData(time.Time(t0)))
+	enc := DirectJSONRenderer(testData(time.Time(T0)))
 	assert.NoError(t, enc.Err)
 
 	str := string(enc.Bytes)
@@ -50,3 +51,11 @@ func TestDirectJSONRenderer(t *testing.T) {
 	assert.True(t, strings.Contains(response, `"size":123`), response)
 	assert.True(t, strings.Contains(response, `"completedAt":"2001-09-09T02:46:40.001+01:00"`), response)
 }
+
+type fixedClock time.Time
+
+func (c fixedClock) Now() time.Time {
+	return time.Time(c)
+}
+
+var T0 = fixedClock(time.Unix(1000000000, 0))

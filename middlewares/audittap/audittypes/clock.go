@@ -1,4 +1,4 @@
-package audittap
+package audittypes
 
 import "time"
 
@@ -14,4 +14,4 @@ func (c normalClock) Now() time.Time {
 }
 
 // replaceable during testing
-var clock Clock = normalClock{}
+var TheClock Clock = normalClock{}
