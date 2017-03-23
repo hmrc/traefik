@@ -19,6 +19,10 @@ func (as *noopAuditStream) Audit(summary Summary) error {
 	return nil
 }
 
+func (as *noopAuditStream) Close() error {
+	return nil
+}
+
 func TestAuditTap_noop(t *testing.T) {
 	TheClock = T0
 

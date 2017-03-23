@@ -2,6 +2,7 @@ package audittypes
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 )
 
@@ -45,6 +46,7 @@ type AuditResponseWriter interface {
 
 // AuditStream describes a type to which audit summaries can be sent.
 type AuditStream interface {
+	io.Closer
 	Audit(summary Summary) error
 }
 

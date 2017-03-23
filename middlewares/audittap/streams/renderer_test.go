@@ -8,10 +8,11 @@ import (
 	"time"
 )
 
-func testData(t time.Time) Summary {
+func testSummary(clk Clock) Summary {
+	t := clk.Now()
 	return Summary{
-		"source1",
-		DataMap{
+		Source: "source1",
+		Request: DataMap{
 			Host:       "host.com",
 			Method:     "GET",
 			Path:       "/a/b/c",
@@ -19,7 +20,7 @@ func testData(t time.Time) Summary {
 			RemoteAddr: "10.11.12.13:12345",
 			BeganAt:    t,
 		},
-		DataMap{
+		Response: DataMap{
 			Status:      200,
 			Size:        123,
 			CompletedAt: t.Add(time.Millisecond),
@@ -27,8 +28,10 @@ func testData(t time.Time) Summary {
 	}
 }
 
+//-------------------------------------------------------------------------------------------------
+
 func TestDirectJSONRenderer(t *testing.T) {
-	enc := DirectJSONRenderer(testData(time.Time(T0)))
+	enc := DirectJSONRenderer(testSummary(T0))
 	assert.NoError(t, enc.Err)
 
 	str := string(enc.Bytes)
@@ -51,6 +54,41 @@ func TestDirectJSONRenderer(t *testing.T) {
 	assert.True(t, strings.Contains(response, `"size":123`), response)
 	assert.True(t, strings.Contains(response, `"completedAt":"2001-09-09T02:46:40.001+01:00"`), response)
 }
+
+func noopRenderer(ignored Summary) Encoded {
+	return testJson
+}
+
+func TestAuditStream(t *testing.T) {
+	sink := &noopSink{0, 0}
+	as := NewAuditStream(noopRenderer, sink)
+
+	err := as.Audit(testSummary(T0))
+	assert.NoError(t, err)
+	assert.Equal(t, 1, sink.audits)
+
+	err = as.Close()
+	assert.NoError(t, err)
+	assert.Equal(t, 1, sink.closes)
+}
+
+//-------------------------------------------------------------------------------------------------
+
+type noopSink struct {
+	audits, closes int
+}
+
+func (ns *noopSink) Audit(encoded Encoded) error {
+	ns.audits++
+	return nil
+}
+
+func (ns *noopSink) Close() error {
+	ns.closes++
+	return nil
+}
+
+//-------------------------------------------------------------------------------------------------
 
 type fixedClock time.Time
 
