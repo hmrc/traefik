@@ -76,7 +76,7 @@ func (r *recorderResponseWriter) SummariseResponse() DataMap {
 		Status:      r.status,
 		Size:        r.size,
 		Entity:      r.entity,
-		CompletedAt: TheClock.Now(),
+		CompletedAt: TheClock.Now().UTC(),
 	}
 	return res.AddAll(DataMap(rhdr))
 }

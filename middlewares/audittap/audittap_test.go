@@ -53,7 +53,7 @@ func TestAuditTap_noop(t *testing.T) {
 				RemoteAddr:       "101.102.103.104:1234",
 				"hdr-request-id": "R123",
 				"hdr-session-id": "S123",
-				BeganAt:          TheClock.Now(),
+				BeganAt:          TheClock.Now().UTC(),
 			},
 			DataMap{
 				Status: 404,
@@ -61,7 +61,7 @@ func TestAuditTap_noop(t *testing.T) {
 				"hdr-content-type":           "text/plain; charset=utf-8",
 				Size:                         19,
 				Entity:                       []byte("404 page not found\n"),
-				CompletedAt:                  TheClock.Now(),
+				CompletedAt:                  TheClock.Now().UTC(),
 			},
 		},
 		capture.events[0])

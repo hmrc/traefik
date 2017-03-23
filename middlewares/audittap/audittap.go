@@ -46,7 +46,7 @@ func (s *AuditTap) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.
 		Path:       r.URL.Path,
 		Query:      r.URL.RawQuery,
 		RemoteAddr: r.RemoteAddr,
-		BeganAt:    TheClock.Now(),
+		BeganAt:    TheClock.Now().UTC(),
 	}
 	req.AddAll(DataMap(rhdr))
 

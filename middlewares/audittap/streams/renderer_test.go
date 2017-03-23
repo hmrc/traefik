@@ -9,7 +9,7 @@ import (
 )
 
 func testSummary(clk Clock) Summary {
-	t := clk.Now()
+	t := clk.Now().UTC()
 	return Summary{
 		Source: "source1",
 		Request: DataMap{
@@ -48,11 +48,11 @@ func TestDirectJSONRenderer(t *testing.T) {
 	assert.True(t, strings.Contains(request, `"path":"/a/b/c"`), request)
 	assert.True(t, strings.Contains(request, `"query":"?z=00"`), request)
 	assert.True(t, strings.Contains(request, `"remoteAddr":"10.11.12.13:12345"`), request)
-	assert.True(t, strings.Contains(request, `"beganAt":"2001-09-09T02:46:40+01:00"`), request)
+	assert.True(t, strings.Contains(request, `"beganAt":"2001-09-09T01:46:40Z"`), request)
 
 	assert.True(t, strings.Contains(response, `"status":200`), response)
 	assert.True(t, strings.Contains(response, `"size":123`), response)
-	assert.True(t, strings.Contains(response, `"completedAt":"2001-09-09T02:46:40.001+01:00"`), response)
+	assert.True(t, strings.Contains(response, `"completedAt":"2001-09-09T01:46:40.001Z"`), response)
 }
 
 func noopRenderer(ignored Summary) Encoded {

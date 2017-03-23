@@ -57,7 +57,7 @@ func TestAuditResponseWriter_headers(t *testing.T) {
 			"hdr-content-length": "123",
 			"hdr-request-id":     "abc123",
 			"hdr-cookie":         []string{"a=1", "b=2", "c=3"},
-			CompletedAt:          T0.Now(),
+			CompletedAt:          T0.Now().UTC(),
 			Status:               0,
 			Size:                 0,
 			Entity:               []byte{},
