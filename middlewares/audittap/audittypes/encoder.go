@@ -15,10 +15,12 @@ type Encoded struct {
 	Err   error
 }
 
+// Encode returns the pre-encoded bytes.
 func (enc Encoded) Encode() ([]byte, error) {
 	return enc.Bytes, enc.Err
 }
 
+// Length returns the length of the pre-encoded bytes.
 func (enc Encoded) Length() int {
 	return len(enc.Bytes)
 }

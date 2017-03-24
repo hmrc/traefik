@@ -1,7 +1,7 @@
 package audittap
 
 import (
-	. "github.com/containous/traefik/middlewares/audittap/audittypes"
+	"github.com/containous/traefik/middlewares/audittap/audittypes"
 	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"testing"
@@ -9,29 +9,29 @@ import (
 )
 
 func TestAuditResponseWriter_no_body(t *testing.T) {
-	TheClock = T0
+	audittypes.TheClock = T0
 
 	recorder := httptest.NewRecorder()
 	w := NewAuditResponseWriter(recorder, MaximumEntityLength)
 	w.WriteHeader(204)
-	assert.Equal(t, 204, w.SummariseResponse()[Status])
-	assert.Equal(t, 0, w.SummariseResponse()[Size])
+	assert.Equal(t, 204, w.SummariseResponse()[audittypes.Status])
+	assert.Equal(t, 0, w.SummariseResponse()[audittypes.Size])
 }
 
 func TestAuditResponseWriter_with_body(t *testing.T) {
-	TheClock = T0
+	audittypes.TheClock = T0
 
 	recorder := httptest.NewRecorder()
 	w := NewAuditResponseWriter(recorder, MaximumEntityLength)
 	w.WriteHeader(200)
 	w.Write([]byte("hello"))
 	w.Write([]byte("world"))
-	assert.Equal(t, 200, w.SummariseResponse()[Status])
-	assert.Equal(t, 10, w.SummariseResponse()[Size])
+	assert.Equal(t, 200, w.SummariseResponse()[audittypes.Status])
+	assert.Equal(t, 10, w.SummariseResponse()[audittypes.Size])
 }
 
 func TestAuditResponseWriter_headers(t *testing.T) {
-	TheClock = T0
+	audittypes.TheClock = T0
 
 	recorder := httptest.NewRecorder()
 	w := NewAuditResponseWriter(recorder, MaximumEntityLength)
@@ -53,14 +53,14 @@ func TestAuditResponseWriter_headers(t *testing.T) {
 	w.Header().Add("Cookie", "c=3")
 
 	assert.Equal(t,
-		DataMap{
-			"hdr-content-length": "123",
-			"hdr-request-id":     "abc123",
-			"hdr-cookie":         []string{"a=1", "b=2", "c=3"},
-			CompletedAt:          T0.Now().UTC(),
-			Status:               0,
-			Size:                 0,
-			Entity:               []byte{},
+		audittypes.DataMap{
+			"hdr-content-length":   "123",
+			"hdr-request-id":       "abc123",
+			"hdr-cookie":           []string{"a=1", "b=2", "c=3"},
+			audittypes.CompletedAt: T0.Now().UTC(),
+			audittypes.Status:      0,
+			audittypes.Size:        0,
+			audittypes.Entity:      []byte{},
 		},
 		w.SummariseResponse())
 }

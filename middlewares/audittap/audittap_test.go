@@ -2,7 +2,7 @@ package audittap
 
 import (
 	"fmt"
-	. "github.com/containous/traefik/middlewares/audittap/audittypes"
+	"github.com/containous/traefik/middlewares/audittap/audittypes"
 	"github.com/containous/traefik/types"
 	"github.com/stretchr/testify/assert"
 	"net/http"
@@ -11,10 +11,10 @@ import (
 )
 
 type noopAuditStream struct {
-	events []Summary
+	events []audittypes.Summary
 }
 
-func (as *noopAuditStream) Audit(summary Summary) error {
+func (as *noopAuditStream) Audit(summary audittypes.Summary) error {
 	as.events = append(as.events, summary)
 	return nil
 }
@@ -24,12 +24,12 @@ func (as *noopAuditStream) Close() error {
 }
 
 func TestAuditTap_noop(t *testing.T) {
-	TheClock = T0
+	audittypes.TheClock = T0
 
 	capture := &noopAuditStream{}
 	cfg := &types.AuditTap{}
 	tap, err := NewAuditTap(cfg, "backend1")
-	tap.AuditStreams = []AuditStream{capture}
+	tap.AuditStreams = []audittypes.AuditStream{capture}
 	assert.NoError(t, err)
 
 	req := httptest.NewRequest("", "/a/b/c?d=1&e=2", nil)
@@ -43,25 +43,25 @@ func TestAuditTap_noop(t *testing.T) {
 
 	assert.Equal(t, 1, len(capture.events))
 	assert.Equal(t,
-		Summary{
+		audittypes.Summary{
 			"backend1",
-			DataMap{
-				Host:             "example.co.uk",
-				Method:           "GET",
-				Path:             "/a/b/c",
-				Query:            "d=1&e=2",
-				RemoteAddr:       "101.102.103.104:1234",
-				"hdr-request-id": "R123",
-				"hdr-session-id": "S123",
-				BeganAt:          TheClock.Now().UTC(),
+			audittypes.DataMap{
+				audittypes.Host:       "example.co.uk",
+				audittypes.Method:     "GET",
+				audittypes.Path:       "/a/b/c",
+				audittypes.Query:      "d=1&e=2",
+				audittypes.RemoteAddr: "101.102.103.104:1234",
+				"hdr-request-id":      "R123",
+				"hdr-session-id":      "S123",
+				audittypes.BeganAt:    audittypes.TheClock.Now().UTC(),
 			},
-			DataMap{
-				Status: 404,
+			audittypes.DataMap{
+				audittypes.Status:            404,
 				"hdr-x-content-type-options": "nosniff",
 				"hdr-content-type":           "text/plain; charset=utf-8",
-				Size:                         19,
-				Entity:                       []byte("404 page not found\n"),
-				CompletedAt:                  TheClock.Now().UTC(),
+				audittypes.Size:              19,
+				audittypes.Entity:            []byte("404 page not found\n"),
+				audittypes.CompletedAt:       audittypes.TheClock.Now().UTC(),
 			},
 		},
 		capture.events[0])

@@ -2,7 +2,7 @@ package streams
 
 import (
 	"github.com/Shopify/sarama"
-	. "github.com/containous/traefik/middlewares/audittap/audittypes"
+	"github.com/containous/traefik/middlewares/audittap/audittypes"
 	"log"
 	"sync"
 )
@@ -50,7 +50,7 @@ func (kas *kafkaAuditSink) logErrors() {
 	}()
 }
 
-func (kas *kafkaAuditSink) Audit(encoded Encoded) error {
+func (kas *kafkaAuditSink) Audit(encoded audittypes.Encoded) error {
 	message := &sarama.ProducerMessage{Topic: kas.topic, Value: encoded}
 	kas.producer.Input() <- message
 	return nil

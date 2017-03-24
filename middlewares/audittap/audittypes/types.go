@@ -52,13 +52,15 @@ type AuditStream interface {
 
 //-------------------------------------------------------------------------------------------------
 
-func (summary Summary) ToJson() Encoded {
+// ToJSON marshals the event as JSON.
+func (summary Summary) ToJSON() Encoded {
 	b, err := json.Marshal(summary)
 	return Encoded{b, err}
 }
 
 //-------------------------------------------------------------------------------------------------
 
+// AddAll merges two data maps. The main data map is mutated and then returned.
 func (m DataMap) AddAll(other DataMap) DataMap {
 	for k, v := range other {
 		m[k] = v

@@ -1,17 +1,17 @@
 package streams
 
 import (
-	. "github.com/containous/traefik/middlewares/audittap/audittypes"
+	"github.com/containous/traefik/middlewares/audittap/audittypes"
 )
 
 // Renderer is a function that encodes an audit summary.
-type Renderer func(Summary) Encoded
+type Renderer func(audittypes.Summary) audittypes.Encoded
 
 //-------------------------------------------------------------------------------------------------
 
 // DirectJSONRenderer is a Renderer that directly converts the summary to JSON.
-func DirectJSONRenderer(summary Summary) Encoded {
-	return summary.ToJson()
+func DirectJSONRenderer(summary audittypes.Summary) audittypes.Encoded {
+	return summary.ToJSON()
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -21,11 +21,12 @@ type stream struct {
 	sink     AuditSink
 }
 
-func NewAuditStream(renderer Renderer, sink AuditSink) AuditStream {
+// NewAuditStream conflates a renderer with an audit sink.
+func NewAuditStream(renderer Renderer, sink AuditSink) audittypes.AuditStream {
 	return &stream{renderer, sink}
 }
 
-func (s *stream) Audit(summary Summary) error {
+func (s *stream) Audit(summary audittypes.Summary) error {
 	enc := s.renderer(summary)
 	if enc.Err != nil {
 		return enc.Err

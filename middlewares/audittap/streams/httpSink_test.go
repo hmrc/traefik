@@ -19,11 +19,11 @@ func TestHttpSink(t *testing.T) {
 	}))
 	defer stub.Close()
 
-	w1, err := NewHttpSink("PUT", stub.URL, noopRenderer)
+	w1, err := NewHTTPSink("PUT", stub.URL, noopRenderer)
 	assert.NoError(t, err)
 
-	err = w1.Audit(testJson)
+	err = w1.Audit(encodedJSONSample)
 	assert.NoError(t, err)
 
-	assert.Equal(t, string(testJson.Bytes), got)
+	assert.Equal(t, string(encodedJSONSample.Bytes), got)
 }

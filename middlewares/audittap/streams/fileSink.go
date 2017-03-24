@@ -2,7 +2,7 @@ package streams
 
 import (
 	"fmt"
-	. "github.com/containous/traefik/middlewares/audittap/audittypes"
+	"github.com/containous/traefik/middlewares/audittap/audittypes"
 	"io"
 	"os"
 	"strings"
@@ -19,6 +19,7 @@ type fileSink struct {
 	render  Renderer
 }
 
+// NewFileSink creates an audit sink for writing to a file.
 func NewFileSink(file, backend string, renderer Renderer) (AuditSink, error) {
 	flag := os.O_RDWR | os.O_CREATE
 	if strings.HasPrefix(file, ">>") {
@@ -48,7 +49,7 @@ func determineFilename(file, backend string) string {
 	return name
 }
 
-func (fas *fileSink) Audit(encoded Encoded) error {
+func (fas *fileSink) Audit(encoded audittypes.Encoded) error {
 	fas.w.Write(fas.lineEnd)
 	_, err := fas.w.Write(encoded.Bytes)
 	fas.lineEnd = commaNewline

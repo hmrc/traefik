@@ -1,29 +1,29 @@
 package streams
 
 import (
-	. "github.com/containous/traefik/middlewares/audittap/audittypes"
+	"github.com/containous/traefik/middlewares/audittap/audittypes"
 	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
 	"time"
 )
 
-func testSummary(clk Clock) Summary {
+func testSummary(clk audittypes.Clock) audittypes.Summary {
 	t := clk.Now().UTC()
-	return Summary{
+	return audittypes.Summary{
 		Source: "source1",
-		Request: DataMap{
-			Host:       "host.com",
-			Method:     "GET",
-			Path:       "/a/b/c",
-			Query:      "?z=00",
-			RemoteAddr: "10.11.12.13:12345",
-			BeganAt:    t,
+		Request: audittypes.DataMap{
+			audittypes.Host:       "host.com",
+			audittypes.Method:     "GET",
+			audittypes.Path:       "/a/b/c",
+			audittypes.Query:      "?z=00",
+			audittypes.RemoteAddr: "10.11.12.13:12345",
+			audittypes.BeganAt:    t,
 		},
-		Response: DataMap{
-			Status:      200,
-			Size:        123,
-			CompletedAt: t.Add(time.Millisecond),
+		Response: audittypes.DataMap{
+			audittypes.Status:      200,
+			audittypes.Size:        123,
+			audittypes.CompletedAt: t.Add(time.Millisecond),
 		},
 	}
 }
@@ -55,8 +55,8 @@ func TestDirectJSONRenderer(t *testing.T) {
 	assert.True(t, strings.Contains(response, `"completedAt":"2001-09-09T01:46:40.001Z"`), response)
 }
 
-func noopRenderer(ignored Summary) Encoded {
-	return testJson
+func noopRenderer(ignored audittypes.Summary) audittypes.Encoded {
+	return encodedJSONSample
 }
 
 func TestAuditStream(t *testing.T) {
@@ -78,7 +78,7 @@ type noopSink struct {
 	audits, closes int
 }
 
-func (ns *noopSink) Audit(encoded Encoded) error {
+func (ns *noopSink) Audit(encoded audittypes.Encoded) error {
 	ns.audits++
 	return nil
 }

@@ -3,7 +3,7 @@ package streams
 import (
 	"bytes"
 	"fmt"
-	. "github.com/containous/traefik/middlewares/audittap/audittypes"
+	"github.com/containous/traefik/middlewares/audittap/audittypes"
 	"net/http"
 	"net/url"
 )
@@ -13,7 +13,8 @@ type httpSink struct {
 	render           Renderer
 }
 
-func NewHttpSink(method, endpoint string, renderer Renderer) (AuditSink, error) {
+// NewHTTPSink creates an audit sink for send audit events to an HTTP server, typically via POST.
+func NewHTTPSink(method, endpoint string, renderer Renderer) (AuditSink, error) {
 	if method == "" {
 		method = http.MethodPost
 	}
@@ -24,7 +25,7 @@ func NewHttpSink(method, endpoint string, renderer Renderer) (AuditSink, error) 
 	return &httpSink{method, endpoint, renderer}, nil
 }
 
-func (has *httpSink) Audit(encoded Encoded) error {
+func (has *httpSink) Audit(encoded audittypes.Encoded) error {
 	request, err := http.NewRequest(has.method, has.endpoint, bytes.NewBuffer(encoded.Bytes))
 	if err != nil {
 		return err

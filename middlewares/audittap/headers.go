@@ -2,7 +2,7 @@ package audittap
 
 import (
 	"bytes"
-	. "github.com/containous/traefik/middlewares/audittap/audittypes"
+	"github.com/containous/traefik/middlewares/audittap/audittypes"
 	"net/http"
 	"strings"
 )
@@ -85,8 +85,8 @@ func (h Headers) SimplifyCookies() Headers {
 
 // Flatten replaces length=1 []string values with a single string.
 // Values with longer length remain unchanged.
-func (h Headers) Flatten(prefix string) DataMap {
-	flat := make(DataMap)
+func (h Headers) Flatten(prefix string) audittypes.DataMap {
+	flat := make(audittypes.DataMap)
 	for k, v := range h {
 		if len(v) == 1 {
 			flat[prefix+k] = v[0]

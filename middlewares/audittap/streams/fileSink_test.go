@@ -1,7 +1,7 @@
 package streams
 
 import (
-	. "github.com/containous/traefik/middlewares/audittap/audittypes"
+	"github.com/containous/traefik/middlewares/audittap/audittypes"
 	"testing"
 
 	"bufio"
@@ -11,7 +11,7 @@ import (
 
 const tmpFile = "/tmp/testFileSink"
 
-var testJson = Encoded{
+var encodedJSONSample = audittypes.Encoded{
 	Bytes: []byte("[1,2,3]"),
 	Err:   nil,
 }
@@ -25,10 +25,10 @@ func TestFileSink(t *testing.T) {
 		assert.NoError(t, e)
 	}()
 
-	err = w.Audit(testJson)
+	err = w.Audit(encodedJSONSample)
 	assert.NoError(t, err)
 
-	err = w.Audit(testJson)
+	err = w.Audit(encodedJSONSample)
 	assert.NoError(t, err)
 
 	err = w.Close()

@@ -1,7 +1,7 @@
 package audittap
 
 import (
-	. "github.com/containous/traefik/middlewares/audittap/audittypes"
+	"github.com/containous/traefik/middlewares/audittap/audittypes"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
@@ -10,7 +10,7 @@ import (
 func TestShallowHeaders_emptyCase(t *testing.T) {
 	hdr := make(http.Header)
 	flat := NewHeaders(hdr).Flatten("")
-	assert.Equal(t, DataMap{}, flat)
+	assert.Equal(t, audittypes.DataMap{}, flat)
 }
 
 func TestShallowHeaders_SimplifyCookies(t *testing.T) {
@@ -18,7 +18,7 @@ func TestShallowHeaders_SimplifyCookies(t *testing.T) {
 	hdr.Set("cookie", "a=123; b=456")
 	hdr.Add("cookie", "c=789")
 	flat := NewHeaders(hdr).SimplifyCookies().Flatten("")
-	assert.Equal(t, DataMap{
+	assert.Equal(t, audittypes.DataMap{
 		"cookie": []string{"a=123", "b=456", "c=789"},
 	}, flat)
 }
@@ -34,7 +34,7 @@ func TestShallowHeaders_DropHopByHopHeaders(t *testing.T) {
 	hdr.Set("transfer-encoding", "g")
 	hdr.Set("upgrade", "h")
 	flat := NewHeaders(hdr).DropHopByHopHeaders().Flatten("")
-	assert.Equal(t, DataMap{}, flat)
+	assert.Equal(t, audittypes.DataMap{}, flat)
 }
 
 func TestShallowHeaders_CamelCaseKeys(t *testing.T) {
@@ -43,7 +43,7 @@ func TestShallowHeaders_CamelCaseKeys(t *testing.T) {
 	hdr.Set("Content-Type", "b")
 	hdr.Set("X-Request-ID", "c")
 	flat := NewHeaders(hdr).CamelCaseKeys().Flatten("")
-	assert.Equal(t, DataMap{
+	assert.Equal(t, audittypes.DataMap{
 		"host":        "a",
 		"contentType": "b",
 		"xRequestId":  "c",

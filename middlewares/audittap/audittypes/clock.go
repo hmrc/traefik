@@ -13,5 +13,5 @@ func (c normalClock) Now() time.Time {
 	return time.Now()
 }
 
-// replaceable during testing
+// TheClock is a clock that is replaceable during testing.
 var TheClock Clock = normalClock{}

@@ -21,7 +21,7 @@ func TestKafkaSink(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Exactly(t, endpoints, tp.endpoints)
 
-	err = kafkaSink.Audit(testJson)
+	err = kafkaSink.Audit(encodedJSONSample)
 	assert.NoError(t, err)
 
 	err = kafkaSink.Close()

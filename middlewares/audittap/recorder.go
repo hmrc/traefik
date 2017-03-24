@@ -3,7 +3,7 @@ package audittap
 import (
 	"bufio"
 	"fmt"
-	. "github.com/containous/traefik/middlewares/audittap/audittypes"
+	"github.com/containous/traefik/middlewares/audittap/audittypes"
 	"net"
 	"net/http"
 )
@@ -21,7 +21,7 @@ type recorderResponseWriter struct {
 }
 
 // NewAuditResponseWriter creates a ResponseWriter that captures extra information.
-func NewAuditResponseWriter(w http.ResponseWriter, maxEntityLength int) AuditResponseWriter {
+func NewAuditResponseWriter(w http.ResponseWriter, maxEntityLength int) audittypes.AuditResponseWriter {
 	entity := make([]byte, 0, initialBufferSize)
 	return &recorderResponseWriter{w, 0, 0, entity, maxEntityLength}
 }
@@ -70,13 +70,13 @@ func (r *recorderResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	return hijacker.Hijack()
 }
 
-func (r *recorderResponseWriter) SummariseResponse() DataMap {
+func (r *recorderResponseWriter) SummariseResponse() audittypes.DataMap {
 	rhdr := NewHeaders(r.Header()).DropHopByHopHeaders().SimplifyCookies().Flatten("hdr-")
-	res := DataMap{
-		Status:      r.status,
-		Size:        r.size,
-		Entity:      r.entity,
-		CompletedAt: TheClock.Now().UTC(),
+	res := audittypes.DataMap{
+		audittypes.Status:      r.status,
+		audittypes.Size:        r.size,
+		audittypes.Entity:      r.entity,
+		audittypes.CompletedAt: audittypes.TheClock.Now().UTC(),
 	}
-	return res.AddAll(DataMap(rhdr))
+	return res.AddAll(audittypes.DataMap(rhdr))
 }
