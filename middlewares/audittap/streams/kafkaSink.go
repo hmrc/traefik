@@ -19,8 +19,8 @@ type kafkaAuditSink struct {
 	join     *sync.WaitGroup
 }
 
-// seam for testing
-var newAsyncProducer = func(endpoints []string, config *sarama.Config) (kafkaAsyncProducer, error) {
+// NewAsyncProducer is a seam for testing
+var NewAsyncProducer = func(endpoints []string, config *sarama.Config) (kafkaAsyncProducer, error) {
 	return sarama.NewAsyncProducer(endpoints, config)
 }
 
@@ -28,7 +28,7 @@ var newAsyncProducer = func(endpoints []string, config *sarama.Config) (kafkaAsy
 func NewKafkaSink(topic string, endpoints []string) (sink AuditSink, err error) {
 	config := sarama.NewConfig()
 	config.Producer.Return.Successes = false
-	producer, err := newAsyncProducer(endpoints, config)
+	producer, err := NewAsyncProducer(endpoints, config)
 	if err != nil {
 		return nil, err
 	}

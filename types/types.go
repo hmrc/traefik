@@ -321,16 +321,10 @@ type AccessLog struct {
 
 // AuditTap holds AuditTap configuration
 type AuditTap struct {
-	// HTTP or Kafka endpoint (only one of them is used)
-	//Endpoint string `json:"endpoint,omitempty"`
-	// HTTP method for REST (default: "GET")
-	//Method string `json:"method,omitempty"`
-	// Topic for Kafka (if provided, Kafka replaces REST)
-	//Topic string `json:"topic,omitempty"`
-	// write audit items to this file (optional)
-	//LogFile string `json:"logFile,omitempty"`
-	// output rendering (optional)
-	//Format string `json:"format,omitempty"`
+	// Kafka endpoints
+	KafkaEndpoints []string `json:"kafkaEndpoints,omitempty"`
+	// Topic for Kafka
+	Topic string `json:"topic,omitempty"`
 	// MaxEntityLength truncates entities (bodies) longer than this (units are allowed, eg. 32KiB)
 	MaxEntityLength string `json:"maxEntityLength,omitempty"`
 }

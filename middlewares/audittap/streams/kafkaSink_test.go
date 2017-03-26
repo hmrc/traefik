@@ -11,7 +11,7 @@ import (
 func TestKafkaSink(t *testing.T) {
 	tp := &testKafkaAsyncProducer{mu: &sync.Mutex{}}
 
-	newAsyncProducer = func(endpoints []string, config *sarama.Config) (kafkaAsyncProducer, error) {
+	NewAsyncProducer = func(endpoints []string, config *sarama.Config) (kafkaAsyncProducer, error) {
 		tp.endpoints = endpoints
 		return tp, nil
 	}

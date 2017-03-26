@@ -1,7 +1,9 @@
 package audittap
 
 import (
+	"fmt"
 	"github.com/containous/traefik/middlewares/audittap/audittypes"
+	"github.com/containous/traefik/middlewares/audittap/streams"
 	"github.com/containous/traefik/types"
 	"net/http"
 )
@@ -19,15 +21,13 @@ type AuditTap struct {
 
 // NewAuditTap returns a new AuditTap handler.
 func NewAuditTap(config *types.AuditTap, backend string) (*AuditTap, error) {
-	//var renderer Renderer = DirectJSONRenderer
 
-	//sinks, err := selectSinks(config, backend, renderer)
-	//if err != nil {
-	//	return nil, err
-	//}
+	str, err := selectSinks(config)
+	if err != nil {
+		return nil, err
+	}
 
 	var th int64 = MaximumEntityLength
-	var err error
 	if config.MaxEntityLength != "" {
 		th, _, err = types.AsSI(config.MaxEntityLength)
 		if err != nil {
@@ -35,7 +35,7 @@ func NewAuditTap(config *types.AuditTap, backend string) (*AuditTap, error) {
 		}
 	}
 
-	return &AuditTap{nil, backend, int(th)}, nil
+	return &AuditTap{str, backend, int(th)}, nil
 }
 
 func (s *AuditTap) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
@@ -57,4 +57,23 @@ func (s *AuditTap) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.
 	for _, sink := range s.AuditStreams {
 		sink.Audit(summary)
 	}
+}
+
+func selectSinks(config *types.AuditTap) ([]audittypes.AuditStream, error) {
+	var str []audittypes.AuditStream
+
+	if len(config.KafkaEndpoints) != 0 {
+		if config.Topic == "" {
+			return nil, fmt.Errorf("auditTap config error: no Kafka topic was specified")
+		}
+
+		ks, err := streams.NewKafkaSink(config.Topic, config.KafkaEndpoints)
+		if err != nil {
+			return nil, err
+		}
+		as := streams.NewAuditStream(streams.DirectJSONRenderer, ks)
+		str = append(str, as)
+	}
+
+	return str, nil
 }
