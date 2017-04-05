@@ -2,6 +2,7 @@ package accesslog
 
 import (
 	"bufio"
+	"fmt"
 	"net"
 	"net/http"
 )
@@ -33,14 +34,16 @@ func (crw *captureResponseWriter) WriteHeader(s int) {
 }
 
 func (crw *captureResponseWriter) Flush() {
-	f, ok := crw.rw.(http.Flusher)
-	if ok {
+	if f, ok := crw.rw.(http.Flusher); ok {
 		f.Flush()
 	}
 }
 
 func (crw *captureResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-	return crw.rw.(http.Hijacker).Hijack()
+	if h, ok := crw.rw.(http.Hijacker); ok {
+		return h.Hijack()
+	}
+	return nil, nil, fmt.Errorf("Not a Hijacker: %T", crw.rw)
 }
 
 func (crw *captureResponseWriter) Status() int {

@@ -9,13 +9,15 @@
 # Global configuration
 ################################################################
 
-# Timeout in seconds.
-# Duration to give active requests a chance to finish during hot-reloads
+# Duration to give active requests a chance to finish during hot-reloads.
+# Can be provided in a format supported by [time.ParseDuration](https://golang.org/pkg/time/#ParseDuration) or as raw
+# values (digits). If no units are provided, the value is parsed assuming
+# seconds.
 #
 # Optional
-# Default: 10
+# Default: "10s"
 #
-# graceTimeOut = 10
+# graceTimeOut = "10s"
 
 # Enable debug mode
 #
@@ -38,6 +40,8 @@
 # Optional
 #
 # traefikLogsFile = "log/traefik.log"
+# accessLogsFile = "log/access.log" # (deprecated, see below)
+#
 
 # Log level
 #
@@ -51,11 +55,24 @@
 # Backends throttle duration: minimum duration in seconds between 2 events from providers
 # before applying a new configuration. It avoids unnecessary reloads if multiples events
 # are sent in a short amount of time.
+# Can be provided in a format supported by [time.ParseDuration](https://golang.org/pkg/time/#ParseDuration) or as raw
+# values (digits). If no units are provided, the value is parsed assuming
+# seconds.
 #
 # Optional
-# Default: "2"
+# Default: "2s"
 #
-# ProvidersThrottleDuration = "5"
+# ProvidersThrottleDuration = "2s"
+
+# IdleTimeout: maximum amount of time an idle (keep-alive) connection will remain idle before closing itself.
+# This is set to enforce closing of stale client connections.
+# Can be provided in a format supported by [time.ParseDuration](https://golang.org/pkg/time/#ParseDuration) or as raw
+# values (digits). If no units are provided, the value is parsed assuming seconds.
+#
+# Optional
+# Default: "180s"
+#
+# IdleTimeout = "360s"
 
 # If non-zero, controls the maximum idle (keep-alive) to keep per-host.  If zero, DefaultMaxIdleConnsPerHost is used.
 # If you encounter 'too many open files' errors, you can either change this value, or change `ulimit` value.
@@ -148,16 +165,16 @@ The file can be gzipped as it is written if you require; just add a
   file = "access.log.gz"
 ```
 
-The timestamps written to the log file are in the CLF pattern. This can be overridden
+The timestamps written to the log file are in the CLF pattern
+("02/Jan/2006:15:04:05 -0700"). This can be overridden
 using the `timeFormat` setting, e.g.
 
 ```
 [accessLog]
   file       = "access.log"
-  timeFormat = "02/Jan/2006:15:04:05 -0700"
+  timeFormat = "2006-01-02T15:04:05"
 ```
-
-explicitly sets the CLF pattern, which is the default.
+Specifying the timeFormat is optional.
 
 ### Buffered writing
 
@@ -166,46 +183,11 @@ the buffering, e.g.
 ```
 [accessLog]
   file       = "access.log"
-  bufferSize = 4 KiB
+  bufferSize = "4 KiB"
 ```
 which improves the write performance but there is a slight delay before some
 items are written. Note however that the buffer size is ignored if you have
 a gzipped output file (gzipping also implies buffering of its own).
-
-### Asynchronous writing
-
-Access logs are by default written by the goroutine (similar to a thread) that
-is handling the HTTP request round-trip. You can specify that a separate goroutine
-is to be used, e.g.
-```
-[accessLog]
-  file          = "access.log"
-  async         = true
-  channelBuffer = 100
-```
-The `async` flag enables this feature and `channelBuffer` specifies how many
-log records can be stacked up waiting to be written to file.
-
-Asynchronous writing can be combined with buffered or gzipped writing if required.
-
-Using asynchronous writing will reduce the latency of the HTTP request round-trip
-by taking out the file writing. However, overall there will be a greater CPU load.
-
-The channel buffer has a fixed upper limit. If it ever becomes full, no log records
-will be lost but there will be back-pressure. So, under heavy load in which it becomes
-full, the back pressure will cause the HTTP request round-trip latency to be impaired.
-
-Therefore `channelBuffer` should be just large enough to minimise unwanted
-back-pressure, but should otherwise be as small as possible so that the overhead of
-managing its memory is not too great.
-
-Note that this effect can show up if you do performance testing: under saturation
-loading, asynchronous log writing will perform worse than direct log writing because
-of back pressure. Under unsaturated loading, asynchronous log writing could perform
-better.
-
-If you are unsure, don't use asynchronous writing; buffering (or gzipping) gives good
-speed anyway.
 
 ### Access logs in JSON
 
@@ -217,8 +199,10 @@ of field mappings, which are
  * `originResponseHeaders` : the set of headers received from the origin (a.k.a. upstream) server
  * `downstreamResponseHeaders` : the set of headers passed back to the client
 
-When the output format is "json", they select which items are included (otherwise they are 
-ignored). Here's a short example:
+When the output format is "json", these four select which items are included (otherwise they are 
+ignored).
+
+Here's a short example:
 ```
 [accessLog]
   file   = "access-log.json"
@@ -232,34 +216,39 @@ ignored). Here's a short example:
 JSON records generated by the above will include "RequestMethod", "RequestPath", "RequestProtocol"
 and may also include "Host", "Content-Type", "Server", "Location", and "Content-Length".
 Fields are only written to the output when the corresponding source data is present. Absent data
-is silently omitted from the output. Note in particular that the origin header values will be absent
-for requests that never reached an origin server (i.e. redirects).
+is silently omitted from the output.
+
+Note in particular that the origin header values will be absent for requests that never reached an
+origin server (i.e. redirects). Also note that the internal middleware can alter response headers,
+so the origin and downstream response headers might differ (e.g. for Content-Length).
 
 The order of these fields determines the output ordering (although this is JSON so order is not
 very important).
 
-You might want to rename the fields. So each field can be either
+You can also rename any field as described below.
+
+So each field can be either
 
  * just a name (e.g. "StartUTC"); the same name will be used in the JSON output.
 
  * a source key name and an output key name, separated by colon. This allows fields to be
-   renamed as required. There are examples below.
+   renamed as required, e.g. "StartUTC:time_utc". There are more examples below.
 
 The core fields are:
 
  * RequestAddr: the requested host:IP (as per 'Host' header);
-   RequestHost and RequestPort are extracted from this address.
+   RequestHost and RequestPort are extracted from this address by splitting at the colon.
 
  * RequestMethod: the request method.
 
- * RequestPath: the request path including query parameters, fragment identifier etc
+ * RequestPath: the request path including query parameters, fragment identifier, etc
 
  * RequestProtocol: the HTTP protocol (e.g. "HTTP/1.1")
 
  * RequestLine: the original HTTP line, which consists of the method, the request path and the protocol
 
  * ClientAddr: the remote address of the user-agent;
-   ClientHost and ClientPort are extracted from this remote address.
+   ClientHost and ClientPort are extracted from this remote address by splitting at the colon.
 
  * ClientUsername: the remote user, if known.
 
@@ -299,13 +288,13 @@ The core fields are:
    which case the GzipRatio might be greater than 1. Omitted if
    the information is unavailable.
 
-Here is a fuller example, and this includes the renaming of all the data fields available.
+Here is a fuller example, and this includes all the core data fields available.
 ```
 [accessLog]
-  file       = "access-log.json.gz"
+  file       = "access-log.json"
   format     = "json"
-  timeFormat = ""
-  bufferSize = 4 KiB
+  timeFormat = "2006-01-02T15:04:05"
+  bufferSize = "4 KiB"
 
   coreFields = [
     "StartUTC:              time_utc",
@@ -780,7 +769,7 @@ address = ":8080"
 #
 # To enable Traefik to export internal metrics to Prometheus
 # [web.metrics.prometheus]
-#   Buckets=[0.1,0.3,1.2,5]
+#   Buckets=[0.1,0.3,1.2,5.0]
 #
 # To enable basic auth on the webui
 # with 2 user/pass: test:test and test2:test2
@@ -959,7 +948,7 @@ $ curl -s "http://localhost:8080/api" | jq .
 - `/metrics`: You can enable Traefik to export internal metrics to different monitoring systems (Only Prometheus is supported at the moment).
 
 ```bash
-$ traefik --web.metrics.prometheus --web.metrics.prometheus.buckets="0.1,0.3,1.2,5"
+$ traefik --web.metrics.prometheus --web.metrics.prometheus.buckets="0.1,0.3,1.2,5.0"
 ```
 
 ## Docker backend
@@ -1047,7 +1036,7 @@ Labels can be used on containers to override default behaviour:
 - `traefik.protocol=https`: override the default `http` protocol
 - `traefik.weight=10`: assign this weight to the container
 - `traefik.enable=false`: disable this container in Træfɪk
-- `traefik.frontend.rule=Host:test.traefik.io`: override the default frontend rule (Default: `Host:{containerName}.{domain}`).
+- `traefik.frontend.rule=Host:test.traefik.io`: override the default frontend rule (Default: `Host:{containerName}.{domain}` or `Host:{service}.{project_name}.{domain}` if you are using `docker-compose`).
 - `traefik.frontend.passHostHeader=true`: forward client `Host` header to the backend.
 - `traefik.frontend.priority=10`: override default frontend priority
 - `traefik.frontend.entryPoints=http,https`: assign this frontend to entry points `http` and `https`. Overrides `defaultEntryPoints`.
@@ -1156,19 +1145,25 @@ domain = "marathon.localhost"
 # dcosToken = "xxxxxx"
 
 # Override DialerTimeout
-# Amount of time in seconds to allow the Marathon provider to wait to open a TCP
-# connection to a Marathon master
+# Amount of time to allow the Marathon provider to wait to open a TCP connection
+# to a Marathon master.
+# Can be provided in a format supported by [time.ParseDuration](https://golang.org/pkg/time/#ParseDuration) or as raw
+# values (digits). If no units are provided, the value is parsed assuming
+# seconds.
 #
 # Optional
-# Default: 60
-# dialerTimeout = 5
+# Default: "60s"
+# dialerTimeout = "60s"
 
-# Set the TCP Keep Alive interval (in seconds) for the Marathon HTTP Client
+# Set the TCP Keep Alive interval for the Marathon HTTP Client.
+# Can be provided in a format supported by [time.ParseDuration](https://golang.org/pkg/time/#ParseDuration) or as raw
+# values (digits). If no units are provided, the value is parsed assuming
+# seconds.
 #
 # Optional
-# Default: 10
+# Default: "10s"
 #
-# keepAlive = 10
+# keepAlive = "10s"
 ```
 
 Labels can be used on containers to override default behaviour:
@@ -1861,7 +1856,7 @@ RefreshSeconds = 15
 
 ```
 
-Items in the dynamodb table must have three attributes: 
+Items in the dynamodb table must have three attributes:
 
 
 - 'id' : string
@@ -1869,4 +1864,4 @@ Items in the dynamodb table must have three attributes:
 - 'name' : string
     - The name is used as the name of the frontend or backend.
 - 'frontend' or 'backend' : map
-    - This attribute's structure matches exactly the structure of a Frontend or Backend type in traefik. See types/types.go for details. The presence or absence of this attribute determines its type. So an item should never have both a 'frontend' and a 'backend' attribute. 
+    - This attribute's structure matches exactly the structure of a Frontend or Backend type in traefik. See types/types.go for details. The presence or absence of this attribute determines its type. So an item should never have both a 'frontend' and a 'backend' attribute.
