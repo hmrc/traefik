@@ -27,8 +27,8 @@ func TestAuditTap_noop(t *testing.T) {
 	audittypes.TheClock = T0
 
 	capture := &noopAuditStream{}
-	cfg := &types.AuditTap{}
-	tap, err := NewAuditTap(cfg, "backend1")
+	cfg := &types.AuditSink{}
+	tap, err := NewAuditTap(cfg, []audittypes.AuditStream{capture}, "backend1", http.HandlerFunc(notFound))
 	tap.AuditStreams = []audittypes.AuditStream{capture}
 	assert.NoError(t, err)
 
@@ -39,7 +39,7 @@ func TestAuditTap_noop(t *testing.T) {
 	req.Header.Set("Session-ID", "S123")
 	res := httptest.NewRecorder()
 
-	tap.ServeHTTP(res, req, http.HandlerFunc(notFound))
+	tap.ServeHTTP(res, req)
 
 	assert.Equal(t, 1, len(capture.events))
 	assert.Equal(t,

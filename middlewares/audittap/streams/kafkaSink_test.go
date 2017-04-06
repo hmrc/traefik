@@ -6,6 +6,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/stretchr/testify/assert"
 	"sync"
+	"time"
 )
 
 func TestKafkaSink(t *testing.T) {
@@ -26,6 +27,8 @@ func TestKafkaSink(t *testing.T) {
 
 	err = kafkaSink.Close()
 	assert.NoError(t, err)
+
+	time.Sleep(time.Duration(10 * time.Millisecond))
 
 	assert.True(t, tp.asyncClosed)
 	assert.True(t, tp.inputTerminated)

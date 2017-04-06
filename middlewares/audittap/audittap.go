@@ -1,9 +1,7 @@
 package audittap
 
 import (
-	"fmt"
 	"github.com/containous/traefik/middlewares/audittap/audittypes"
-	"github.com/containous/traefik/middlewares/audittap/streams"
 	"github.com/containous/traefik/types"
 	"net/http"
 )
@@ -17,17 +15,13 @@ type AuditTap struct {
 	AuditStreams    []audittypes.AuditStream
 	Backend         string
 	MaxEntityLength int
+	next            http.Handler
 }
 
 // NewAuditTap returns a new AuditTap handler.
-func NewAuditTap(config *types.AuditTap, backend string) (*AuditTap, error) {
-
-	str, err := selectSinks(config)
-	if err != nil {
-		return nil, err
-	}
-
+func NewAuditTap(config *types.AuditSink, streams []audittypes.AuditStream, backend string, next http.Handler) (*AuditTap, error) {
 	var th int64 = MaximumEntityLength
+	var err error
 	if config.MaxEntityLength != "" {
 		th, _, err = types.AsSI(config.MaxEntityLength)
 		if err != nil {
@@ -35,10 +29,10 @@ func NewAuditTap(config *types.AuditTap, backend string) (*AuditTap, error) {
 		}
 	}
 
-	return &AuditTap{str, backend, int(th)}, nil
+	return &AuditTap{streams, backend, int(th), next}, nil
 }
 
-func (s *AuditTap) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+func (s *AuditTap) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	rhdr := NewHeaders(r.Header).DropHopByHopHeaders().SimplifyCookies().Flatten("hdr-")
 	req := audittypes.DataMap{
 		audittypes.Host:       r.Host,
@@ -51,29 +45,10 @@ func (s *AuditTap) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.
 	req.AddAll(audittypes.DataMap(rhdr))
 
 	ww := NewAuditResponseWriter(rw, s.MaxEntityLength)
-	next.ServeHTTP(ww, r)
+	s.next.ServeHTTP(ww, r)
 
 	summary := audittypes.Summary{s.Backend, req, ww.SummariseResponse()}
 	for _, sink := range s.AuditStreams {
 		sink.Audit(summary)
 	}
-}
-
-func selectSinks(config *types.AuditTap) ([]audittypes.AuditStream, error) {
-	var str []audittypes.AuditStream
-
-	if len(config.KafkaEndpoints) != 0 {
-		if config.Topic == "" {
-			return nil, fmt.Errorf("auditTap config error: no Kafka topic was specified")
-		}
-
-		ks, err := streams.NewKafkaSink(config.Topic, config.KafkaEndpoints)
-		if err != nil {
-			return nil, err
-		}
-		as := streams.NewAuditStream(streams.DirectJSONRenderer, ks)
-		str = append(str, as)
-	}
-
-	return str, nil
 }
