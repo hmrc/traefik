@@ -28,6 +28,9 @@ import (
 	"github.com/containous/traefik/log"
 	"github.com/containous/traefik/middlewares"
 	"github.com/containous/traefik/middlewares/accesslog"
+	"github.com/containous/traefik/middlewares/audittap"
+	"github.com/containous/traefik/middlewares/audittap/audittypes"
+	"github.com/containous/traefik/middlewares/audittap/streams"
 	"github.com/containous/traefik/provider"
 	"github.com/containous/traefik/safe"
 	"github.com/containous/traefik/types"
@@ -54,6 +57,7 @@ type Server struct {
 	accessLoggerMiddleware     *accesslog.LogHandler
 	routinesPool               *safe.Pool
 	leadership                 *cluster.Leadership
+	auditStreams               []audittypes.AuditStream
 }
 
 type serverEntryPoints map[string]*serverEntryPoint
@@ -105,6 +109,7 @@ func NewServer(globalConfiguration GlobalConfiguration) *Server {
 
 // Start starts the server.
 func (server *Server) Start() {
+	server.initalizeAuditStreams()
 	server.startHTTPServers()
 	server.startLeadership()
 	server.routinesPool.Go(func(stop chan bool) {
@@ -627,8 +632,10 @@ func (server *Server) loadConfig(configurations configs, globalConfiguration Glo
 				} else {
 					if backends[frontend.Backend] == nil {
 						log.Debugf("Creating backend %s", frontend.Backend)
+
 						saveBackend := accesslog.NewSaveBackend(fwd, frontend.Backend)
-						saveFrontend := accesslog.NewSaveFrontend(saveBackend, frontendName)
+						auditTap, _ := audittap.NewAuditTap(&types.AuditSink{}, server.auditStreams, frontend.Backend, saveBackend)
+						saveFrontend := accesslog.NewSaveFrontend(auditTap, frontendName)
 						rr, _ := roundrobin.New(saveFrontend)
 						if configuration.Backends[frontend.Backend] == nil {
 							log.Errorf("Undefined backend '%s' for frontend %s", frontend.Backend, frontendName)
@@ -846,6 +853,31 @@ func (server *Server) buildDefaultHTTPRouter() *mux.Router {
 	router.StrictSlash(true)
 	router.SkipClean(true)
 	return router
+}
+
+func (server *Server) initalizeAuditStreams() {
+	var as streams.AuditSink
+	if server.globalConfiguration.AuditSink != nil {
+		var err error
+
+		switch server.globalConfiguration.AuditSink.Type {
+		case "AMQP":
+			messages := make(chan audittypes.Encoded, server.globalConfiguration.AuditSink.ChannelLength)
+			as, err = streams.NewAmqpSink(server.globalConfiguration.AuditSink, messages)
+			if err != nil {
+				log.Fatal("Error creating new AMQP Sink", err)
+			}
+			log.Info("Created AMQP sink")
+		default:
+			log.Warn("AuditSink.Type <%v> not currently supported", server.globalConfiguration.AuditSink)
+			return
+		}
+
+		astr := streams.NewAuditStream(streams.DirectJSONRenderer, as)
+		server.auditStreams = append(server.auditStreams, astr)
+	} else {
+		log.Warn("No audit sink info")
+	}
 }
 
 func getRoute(serverRoute *serverRoute, route *types.Route) error {

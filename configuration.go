@@ -29,6 +29,7 @@ type GlobalConfiguration struct {
 	CheckNewVersion           bool                    `description:"Periodically check if a new version has been released"`
 	AccessLogsFile            string                  `description:"Access log file"`
 	AccessLog                 *types.AccessLog        `description:"Access log settings (instead of accessLogFile)"`
+	AuditSink                 *types.AuditSink        `description:"Audit Sink settings"`
 	TraefikLogsFile           string                  `description:"Traefik log file"`
 	LogLevel                  string                  `short:"l" description:"Log level"`
 	EntryPoints               EntryPoints             `description:"Entrypoints definition using format: --entryPoints='Name:http Address::8000 Redirect.EntryPoint:https' --entryPoints='Name:https Address::4442 TLS:tests/traefik.crt,tests/traefik.key;prod/traefik.crt,prod/traefik.key'"`
@@ -463,6 +464,7 @@ func NewTraefikConfiguration() *TraefikConfiguration {
 			GraceTimeOut:              flaeg.Duration(10 * time.Second),
 			AccessLogsFile:            "",
 			AccessLog:                 &types.AccessLog{},
+			AuditSink:                 &types.AuditSink{},
 			TraefikLogsFile:           "",
 			LogLevel:                  "ERROR",
 			EntryPoints:               map[string]*EntryPoint{},

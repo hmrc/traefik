@@ -1,5 +1,5 @@
-hash: 8349c21c53c639aa79752c4e4b07e323ddb4f05be783564d7de687afbb6f2d67
-updated: 2017-03-28T22:35:17.448681338+02:00
+hash: 283fbd58586aeec4d6252657047f1b7cb76049bdb17ffa17cc7bc66a77828082
+updated: 2017-04-11T16:11:01.971755611+01:00
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -15,6 +15,8 @@ imports:
   - eureka
 - name: github.com/ArthurHlt/gominlog
   version: 068c01ce147ad68fca25ef3fa29ae5395ae273ab
+- name: github.com/assembla/cony
+  version: dd62697b0adb9adfda8589520cb85f4cbc2361f1
 - name: github.com/aws/aws-sdk-go
   version: 3f8f870ec9939e32b3372abf74d24e468bcd285d
   subpackages:
@@ -95,8 +97,6 @@ imports:
 - name: github.com/coreos/etcd
   version: c400d05d0aa73e21e431c16145e558d624098018
   subpackages:
-  - Godeps/_workspace/src/github.com/ugorji/go/codec
-  - Godeps/_workspace/src/golang.org/x/net/context
   - client
   - pkg/pathutil
   - pkg/types
@@ -178,6 +178,12 @@ imports:
   version: fd1de70867126402be23c306e1ce32828455d85b
 - name: github.com/eapache/channels
   version: 47238d5aae8c0fefd518ef2bee46290909cf8263
+- name: github.com/eapache/go-resiliency
+  version: 6800482f2c813e689c88b7ed3282262385011890
+  subpackages:
+  - breaker
+- name: github.com/eapache/go-xerial-snappy
+  version: bb955e01b9346ac19dc29eb16586c90ded99a98c
 - name: github.com/eapache/queue
   version: 44cc805cf13205b55f69e14bcb69867d1ae92f98
 - name: github.com/edeckers/auroradnsclient
@@ -226,6 +232,8 @@ imports:
   version: 5677a0e3d5e89854c9974e1256839ee23f8233ca
   subpackages:
   - proto
+- name: github.com/golang/snappy
+  version: 7db9049039a047d955fe8c19b83c8ff5abd765c7
 - name: github.com/google/go-github
   version: c8ebe3a4d7f0791a6315b7410353d4084c58805d
   subpackages:
@@ -239,7 +247,7 @@ imports:
 - name: github.com/gorilla/context
   version: 1ea25387ff6f684839d82767c1733ff4d4d15d0a
 - name: github.com/gorilla/websocket
-  version: 4873052237e4eeda85cf50c071ef33836fe8e139
+  version: c36f2fe5c330f0ac404b616b96c438b8616b1aaf
 - name: github.com/hashicorp/consul
   version: fce7d75609a04eeb9d4bf41c8dc592aac18fc97d
   subpackages:
@@ -263,6 +271,8 @@ imports:
   version: 72f9bd7c4e0c2a40055ab3d0f09654f730cce982
 - name: github.com/juju/ratelimit
   version: 77ed1c8a01217656d2080ad51981f6e99adaa177
+- name: github.com/klauspost/crc32
+  version: 1bab8b35b6bb565f92cbc97939610af9369f942a
 - name: github.com/mailgun/timetools
   version: fd192d755b00c968d312d23f521eb0cdc6f66bd0
 - name: github.com/mailru/easyjson
@@ -321,8 +331,14 @@ imports:
   - ovh
 - name: github.com/pborman/uuid
   version: 5007efa264d92316c43112bc573e754bc889b7b1
+- name: github.com/pierrec/lz4
+  version: 5c9560bfa9ace2bf86080bf40d46b34ae44604df
+- name: github.com/pierrec/xxHash
+  version: 5a004441f897722c627870a981d02b29924215fa
+  subpackages:
+  - xxHash32
 - name: github.com/pkg/errors
-  version: bfd5150e4e41705ded2129ec33379de1cb90b513
+  version: 248dadf4e9068a0b3e79f02ed0a610d935de5302
 - name: github.com/pmezard/go-difflib
   version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
   subpackages:
@@ -355,6 +371,8 @@ imports:
   version: 2c43ff300f3eafcbd7d0b89b10427fc630efdc1e
   subpackages:
   - client
+- name: github.com/rcrowley/go-metrics
+  version: 1f30fe9094a513ce4c700b9a54458bbb0c96996c
 - name: github.com/ryanuber/go-glob
   version: 572520ed46dbddaed19ea3d9541bdd0494163693
 - name: github.com/samuel/go-zookeeper
@@ -363,10 +381,14 @@ imports:
   - zk
 - name: github.com/satori/go.uuid
   version: 879c5887cd475cd7864858769793b2ceb0d44feb
+- name: github.com/Shopify/sarama
+  version: 0fb560e5f7fbcaee2f75e3c34174320709f69944
 - name: github.com/Sirupsen/logrus
   version: a283a10442df8dc09befd873fab202bf8a253d6a
 - name: github.com/spf13/pflag
   version: 5644820622454e71517561946e3d94b9f9db6842
+- name: github.com/streadway/amqp
+  version: afe8eee29a74d213b1f3fb2586058157c397da60
 - name: github.com/streamrail/concurrent-map
   version: 65a174a3a4188c0b7099acbc6cfa0c53628d3287
 - name: github.com/stretchr/objx

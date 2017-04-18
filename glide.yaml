@@ -138,5 +138,10 @@ import:
   version: v0.3
   subpackages:
   - proto
-- package: github.com/rancher/go-rancher
-  version: 2c43ff300f3eafcbd7d0b89b10427fc630efdc1e
+- package: github.com/eapache/go-resiliency
+  version: ^1.0.0
+- package: github.com/Shopify/sarama
+  version: ^1.11.0
+- package: github.com/streadway/amqp
+- package: github.com/assembla/cony
+  version: ^0.3.2

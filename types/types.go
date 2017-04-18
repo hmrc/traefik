@@ -18,6 +18,7 @@ type Backend struct {
 	LoadBalancer   *LoadBalancer     `json:"loadBalancer,omitempty"`
 	MaxConn        *MaxConn          `json:"maxConn,omitempty"`
 	HealthCheck    *HealthCheck      `json:"healthCheck,omitempty"`
+	AuditTap       *AuditSink        `json:"auditTap,omitempty"`
 }
 
 // MaxConn holds maximum connection configuration
@@ -314,4 +315,14 @@ type AccessLog struct {
 	RequestHeaders            []string `json:"requestHeaders,omitempty" description:"Access log request JSON fields: either a list of names or list of name:replacement tuples"`
 	OriginResponseHeaders     []string `json:"originResponseHeader,omitempty" description:"Access log origin server JSON fields: either a list of names or list of name:replacement tuples"`
 	DownstreamResponseHeaders []string `json:"downstreamResponseHeader,omitempty" description:"Access sent downstream JSON fields: either a list of names or list of name:replacement tuples"`
+}
+
+// AuditSink holds AuditSink configuration
+type AuditSink struct {
+	Type            string `json:"type,omitempty" description:"The type of sink: File/HTTP/Kafka/AMQP"`
+	Endpoint        string `json:"endpoint,omitempty" description:"Endpoint for audit tap. e.g. url for HTTP/Kafka/AMQP or filename for File"`
+	Destination     string `json:"destination,omitempty" description:"For Kafka the topic, AMQP the exchange etc."`
+	MaxEntityLength string `json:"maxEntityLength,omitempty" description:"MaxEntityLength truncates entities (bodies) longer than this (units are allowed, eg. 32KiB)"`
+	NumProducers    int    `json:"numProducers,omitempty" description:"The number of concurrent producers which can send messages to the endpoint"`
+	ChannelLength   int    `json:"channelLength,omitempty" description:"Size of the in-memory message channel.  Used as a buffer in case of Producer failure"`
 }
