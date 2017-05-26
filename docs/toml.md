@@ -421,7 +421,7 @@ entryPoint = "https"
 
 ## File backend
 
-Like any other reverse proxy, Træfik can be configured with a file. You have two choices:
+Like any other reverse proxy, Træfik can be configured with a file. You have three choices:
 
 - simply add your configuration at the end of the global configuration file `traefik.toml`:
 
@@ -562,12 +562,20 @@ filename = "rules.toml"
     rule = "Path:/test"
 ```
 
+- or you could have multiple .toml files in a directory:
+ 
+```toml
+[file]
+directory = "/path/to/config/"
+```
+
 If you want Træfik to watch file changes automatically, just add:
 
 ```toml
 [file]
 watch = true
 ```
+
 
 ## API backend
 
