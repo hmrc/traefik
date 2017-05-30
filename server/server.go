@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -531,6 +532,7 @@ func (server *Server) prepareServer(entryPointName string, router *middlewares.H
 		Handler:     negroni,
 		TLSConfig:   tlsConfig,
 		IdleTimeout: time.Duration(server.globalConfiguration.IdleTimeout),
+		ConnState:   connStateChange,
 	}, nil
 }
 
@@ -926,6 +928,12 @@ func sortedFrontendNamesForConfig(configuration *types.Configuration) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+func connStateChange(conn net.Conn, newState http.ConnState) {
+	if statsRecorder != nil {
+		statsRecorder.ConnStateChange(conn, newState)
+	}
 }
 
 func (server *Server) configureFrontends(frontends map[string]*types.Frontend) {
