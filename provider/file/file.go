@@ -99,7 +99,7 @@ func sendConfigToChannel(configurationChan chan<- types.ConfigMessage, configura
 func loadFileConfig(filename string) (*types.Configuration, error) {
 	configuration := new(types.Configuration)
 	if _, err := toml.DecodeFile(filename, configuration); err != nil {
-		return nil, fmt.Errorf("error reading file: %s", err)
+		return nil, fmt.Errorf("error reading configuration file: %s", err)
 	}
 	return configuration, nil
 }
@@ -126,11 +126,20 @@ func loadFileConfigFromDirectory(directory string) (*types.Configuration, error)
 		}
 
 		for k, v := range c.Backends {
-			configuration.Backends[k] = v
+			if _, exists := configuration.Backends[k]; exists {
+				log.Warnf("Backend %s already configured, skipping", k)
+			} else {
+				configuration.Backends[k] = v
+			}
 		}
 
 		for k, v := range c.Frontends {
-			configuration.Frontends[k] = v
+			if _, exists := configuration.Frontends[k]; exists {
+				log.Warnf("Frontend %s already configured, skipping", k)
+			} else {
+				configuration.Frontends[k] = v
+			}
+
 		}
 	}
 

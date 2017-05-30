@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"net/http"
 	"os/exec"
 	"time"
@@ -44,11 +43,7 @@ func (s *FileSuite) TestSimpleConfigurationNoPanic(c *check.C) {
 }
 
 func (s *FileSuite) TestDirectoryConfiguration(c *check.C) {
-	var b bytes.Buffer
-
 	cmd := exec.Command(traefikBinary, "--configFile=fixtures/file/directory.toml")
-	cmd.Stdout = &b
-	cmd.Stderr = &b
 
 	err := cmd.Start()
 	c.Assert(err, checker.IsNil)
