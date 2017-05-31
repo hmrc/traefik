@@ -16,7 +16,6 @@ import (
 	"regexp"
 	"sort"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/codegangsta/negroni"
@@ -84,7 +83,7 @@ func NewServer(globalConfiguration GlobalConfiguration) *Server {
 	server.signals = make(chan os.Signal, 1)
 	server.stopChan = make(chan bool, 1)
 	server.providers = []provider.Provider{}
-	signal.Notify(server.signals, syscall.SIGINT, syscall.SIGTERM)
+	server.configureSignals()
 	currentConfigurations := make(configs)
 	server.currentConfigurations.Set(currentConfigurations)
 	server.globalConfiguration = globalConfiguration
@@ -416,13 +415,6 @@ func (server *Server) startProviders() {
 			}
 		})
 	}
-}
-
-func (server *Server) listenSignals() {
-	sig := <-server.signals
-	log.Infof("I have to go... %+v", sig)
-	log.Info("Stopping server")
-	server.Stop()
 }
 
 func createClientTLSConfig(tlsOption *TLS) (*tls.Config, error) {
