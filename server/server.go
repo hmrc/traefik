@@ -88,10 +88,16 @@ func NewServer(globalConfiguration GlobalConfiguration) *Server {
 		server.leadership = cluster.NewLeadership(server.routinesPool.Ctx(), globalConfiguration.Cluster)
 	}
 
-	var err error
-	server.accessLoggerMiddleware, err = accesslog.NewLogHandler(globalConfiguration.AccessLogsFile)
-	if err != nil {
-		log.Warnf("Unable to create log handler: %s", err)
+	if globalConfiguration.AccessLogsFile != "" {
+		globalConfiguration.AccessLog = &types.AccessLog{FilePath: globalConfiguration.AccessLogsFile, Format: "common"}
+	}
+
+	if globalConfiguration.AccessLog != nil {
+		var err error
+		server.accessLoggerMiddleware, err = accesslog.NewLogHandler(globalConfiguration.AccessLog)
+		if err != nil {
+			log.Warnf("Unable to create log handler: %s", err)
+		}
 	}
 	return server
 }
@@ -147,7 +153,7 @@ func (server *Server) Close() {
 		if ctx.Err() == context.Canceled {
 			return
 		} else if ctx.Err() == context.DeadlineExceeded {
-			log.Warn("Timeout while stopping traefik, killing instance ✝")
+			log.Warnf("Timeout while stopping traefik, killing instance ✝")
 			os.Exit(1)
 		}
 	}(ctx)
@@ -736,7 +742,6 @@ func (server *Server) loadConfig(configurations configs, globalConfiguration Glo
 							negroni.Use(metricsMiddlewareBackend)
 						}
 					}
-
 					ipWhitelistMiddleware, err := configureIPWhitelistMiddleware(frontend.WhitelistSourceRange)
 					if err != nil {
 						log.Fatalf("Error creating IP Whitelister: %s", err)
@@ -762,7 +767,6 @@ func (server *Server) loadConfig(configurations configs, globalConfiguration Glo
 							negroni.Use(authMiddleware)
 						}
 					}
-
 					if configuration.Backends[frontend.Backend].CircuitBreaker != nil {
 						log.Debugf("Creating circuit breaker %s", configuration.Backends[frontend.Backend].CircuitBreaker.Expression)
 						cbreaker, err := middlewares.NewCircuitBreaker(lb, configuration.Backends[frontend.Backend].CircuitBreaker.Expression, cbreaker.Logger(oxyLogger))
