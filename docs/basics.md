@@ -491,3 +491,10 @@ Note that each command is described at the beginning of the help section:
 ```bash
 $ traefik --help
 ```
+
+# Log Rotation
+
+Traefik will close and reopen its log files, assuming they're configured, on receipt of a USR1 signal.  This allows the logs
+to be rotated and processed by an external program, such as `logrotate`.
+
+Note that this does not work on Windows due to the lack of USR signals.
