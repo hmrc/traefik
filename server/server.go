@@ -84,7 +84,7 @@ func NewServer(globalConfiguration GlobalConfiguration) *Server {
 	server.signals = make(chan os.Signal, 1)
 	server.stopChan = make(chan bool, 1)
 	server.providers = []provider.Provider{}
-	signal.Notify(server.signals, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(server.signals, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1)
 	currentConfigurations := make(configs)
 	server.currentConfigurations.Set(currentConfigurations)
 	server.globalConfiguration = globalConfiguration
@@ -421,10 +421,27 @@ func (server *Server) startProviders() {
 }
 
 func (server *Server) listenSignals() {
-	sig := <-server.signals
-	log.Infof("I have to go... %+v", sig)
-	log.Info("Stopping server")
-	server.Stop()
+	for {
+		sig := <-server.signals
+		switch sig {
+		case syscall.SIGUSR1:
+			log.Infof("Closing and re-opening log files for rotation: %+v", sig)
+
+			if server.accessLoggerMiddleware != nil {
+				if err := server.accessLoggerMiddleware.Rotate(); err != nil {
+					log.Errorf("Error rotating access log: %s", err)
+				}
+			}
+
+			if err := log.Rotate(); err != nil {
+				log.Errorf("Error rotating error log: %s", err)
+			}
+		default:
+			log.Infof("I have to go... %+v", sig)
+			log.Info("Stopping server")
+			server.Stop()
+		}
+	}
 }
 
 // creates a TLS config that allows terminating HTTPS for multiple domains using SNI

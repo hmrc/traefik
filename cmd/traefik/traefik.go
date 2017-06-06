@@ -211,16 +211,15 @@ func run(traefikConfiguration *server.TraefikConfiguration) {
 			log.Errorf("Failed to create log path %s: %s", dir, err)
 		}
 
-		fi, err := os.OpenFile(globalConfiguration.TraefikLogsFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		err = log.Open(globalConfiguration.TraefikLogsFile)
 		defer func() {
-			if err := fi.Close(); err != nil {
+			if err := log.Close(); err != nil {
 				log.Error("Error closing file", err)
 			}
 		}()
 		if err != nil {
 			log.Error("Error opening file", err)
 		} else {
-			log.SetOutput(fi)
 			log.SetFormatter(&logrus.TextFormatter{DisableColors: true, FullTimestamp: true, DisableSorting: true})
 		}
 	} else {
