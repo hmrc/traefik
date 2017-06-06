@@ -307,5 +307,5 @@ func (b *Buckets) SetValue(val interface{}) {
 // AccessLog holds the configuration settings for the access logger (middlewares/accesslog).
 type AccessLog struct {
 	FilePath string `json:"file,omitempty" description:"Access log file path"`
-	Format   string `json:"format,omitempty" description:"Access log format: json | common (default: common)"`
+	Format   string `json:"format,omitempty" description:"Access log format: json | common"`
 }

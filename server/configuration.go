@@ -11,6 +11,7 @@ import (
 
 	"github.com/containous/flaeg"
 	"github.com/containous/traefik/acme"
+	"github.com/containous/traefik/middlewares/accesslog"
 	"github.com/containous/traefik/provider/boltdb"
 	"github.com/containous/traefik/provider/consul"
 	"github.com/containous/traefik/provider/docker"
@@ -42,7 +43,7 @@ type GlobalConfiguration struct {
 	GraceTimeOut              flaeg.Duration          `short:"g" description:"Duration to give active requests a chance to finish during hot-reload"`
 	Debug                     bool                    `short:"d" description:"Enable debug mode"`
 	CheckNewVersion           bool                    `description:"Periodically check if a new version has been released"`
-	AccessLogsFile            string                  `description:"(Deprecated) Access logs file"`
+	AccessLogsFile            string                  `description:"(Deprecated) Access logs file"` // Deprecated
 	AccessLog                 *types.AccessLog        `description:"Access log settings"`
 	TraefikLogsFile           string                  `description:"Traefik logs file"`
 	LogLevel                  string                  `short:"l" description:"Log level"`
@@ -457,9 +458,11 @@ func NewTraefikDefaultPointersConfiguration() *TraefikConfiguration {
 	defaultDynamoDB.TableName = "traefik"
 	defaultDynamoDB.Watch = true
 
-	var defaultAccessLog types.AccessLog
-	defaultAccessLog.Format = "common"
-	defaultAccessLog.FilePath = ""
+	// default AccessLog
+	defaultAccessLog := types.AccessLog{
+		Format:   accesslog.CommonFormat,
+		FilePath: "",
+	}
 
 	defaultConfiguration := GlobalConfiguration{
 		Docker:        &defaultDocker,

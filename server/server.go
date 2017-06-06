@@ -89,7 +89,7 @@ func NewServer(globalConfiguration GlobalConfiguration) *Server {
 	}
 
 	if globalConfiguration.AccessLogsFile != "" {
-		globalConfiguration.AccessLog = &types.AccessLog{FilePath: globalConfiguration.AccessLogsFile, Format: "common"}
+		globalConfiguration.AccessLog = &types.AccessLog{FilePath: globalConfiguration.AccessLogsFile, Format: accesslog.CommonFormat}
 	}
 
 	if globalConfiguration.AccessLog != nil {
@@ -153,7 +153,7 @@ func (server *Server) Close() {
 		if ctx.Err() == context.Canceled {
 			return
 		} else if ctx.Err() == context.DeadlineExceeded {
-			log.Warnf("Timeout while stopping traefik, killing instance ✝")
+			log.Warn("Timeout while stopping traefik, killing instance ✝")
 			os.Exit(1)
 		}
 	}(ctx)
@@ -759,6 +759,7 @@ func (server *Server) loadConfig(configurations configs, globalConfiguration Glo
 							negroni.Use(metricsMiddlewareBackend)
 						}
 					}
+
 					ipWhitelistMiddleware, err := configureIPWhitelistMiddleware(frontend.WhitelistSourceRange)
 					if err != nil {
 						log.Fatalf("Error creating IP Whitelister: %s", err)
@@ -784,6 +785,7 @@ func (server *Server) loadConfig(configurations configs, globalConfiguration Glo
 							negroni.Use(authMiddleware)
 						}
 					}
+
 					if configuration.Backends[frontend.Backend].CircuitBreaker != nil {
 						log.Debugf("Creating circuit breaker %s", configuration.Backends[frontend.Backend].CircuitBreaker.Expression)
 						cbreaker, err := middlewares.NewCircuitBreaker(lb, configuration.Backends[frontend.Backend].CircuitBreaker.Expression, cbreaker.Logger(oxyLogger))

@@ -22,6 +22,12 @@ const (
 	// DataTableKey is the key within the request context used to
 	// store the Log Data Table
 	DataTableKey key = "LogDataTable"
+
+	// CommonFormat is the common logging format (CLF)
+	CommonFormat = "common"
+
+	// JSONFormat is the JSON logging format
+	JSONFormat = "json"
 )
 
 // LogHandler will write each request and its response to the access log.
@@ -51,9 +57,9 @@ func NewLogHandler(config *types.AccessLog) (*LogHandler, error) {
 	var formatter logrus.Formatter
 
 	switch config.Format {
-	case "common":
+	case CommonFormat:
 		formatter = new(CommonLogFormatter)
-	case "json":
+	case JSONFormat:
 		formatter = new(logrus.JSONFormatter)
 	default:
 		return nil, fmt.Errorf("unsupported access log format: %s", config.Format)
@@ -65,7 +71,7 @@ func NewLogHandler(config *types.AccessLog) (*LogHandler, error) {
 		Hooks:     make(logrus.LevelHooks),
 		Level:     logrus.InfoLevel,
 	}
-	return &LogHandler{logger: logger, file: file, filePath: config.FilePath}, nil
+	return &LogHandler{logger: logger, file: file}, nil
 }
 
 // GetLogDataTable gets the request context object that contains logging data. This accretes
