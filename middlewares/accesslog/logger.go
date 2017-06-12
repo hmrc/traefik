@@ -71,7 +71,7 @@ func NewLogHandler(config *types.AccessLog) (*LogHandler, error) {
 		Hooks:     make(logrus.LevelHooks),
 		Level:     logrus.InfoLevel,
 	}
-	return &LogHandler{logger: logger, file: file}, nil
+	return &LogHandler{logger: logger, file: file, filePath: config.FilePath}, nil
 }
 
 // GetLogDataTable gets the request context object that contains logging data. This accretes
