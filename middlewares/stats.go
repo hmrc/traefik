@@ -191,11 +191,11 @@ func (s *StatsRecorder) incTotalRequestsForBackend(r *http.Request) {
 		return
 	}
 
-	if backendName, ok = logTable.(accesslog.LogData).Core[accesslog.BackendName]; !ok {
+	if backendName, ok = logTable.(*accesslog.LogData).Core[accesslog.BackendName]; !ok {
 		return
 	}
 
-	if backendAddr, ok = logTable.(accesslog.LogData).Core[accesslog.BackendAddr]; !ok {
+	if backendAddr, ok = logTable.(*accesslog.LogData).Core[accesslog.BackendAddr]; !ok {
 		return
 	}
 
