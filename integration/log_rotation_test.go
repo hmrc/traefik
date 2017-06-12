@@ -120,7 +120,7 @@ func (s *LogRotationSuite) TestTraefikLogRotation(c *check.C) {
 		c.Log("rl " + line)
 		count++
 	}
-	c.Assert(count, checker.Equals, 6)
+	c.Assert(count, checker.Equals, 7)
 
 	//Verify traefik.log output as expected
 	file, err := os.Open("traefik.log")
@@ -131,8 +131,8 @@ func (s *LogRotationSuite) TestTraefikLogRotation(c *check.C) {
 		c.Log("tl " + line)
 		count++
 	}
-	// combined, we have 10 lines
-	c.Assert(count, checker.Equals, 13)
+	// combined, we have 14 lines
+	c.Assert(count, checker.Equals, 14)
 }
 
 func verifyEmptyErrorLog(c *check.C, name string) {
