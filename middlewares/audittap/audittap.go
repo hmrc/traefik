@@ -3,6 +3,7 @@ package audittap
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"unicode"
@@ -39,11 +40,16 @@ func NewAuditTap(config *types.AuditSink, streams []audittypes.AuditStream, back
 
 func (s *AuditTap) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	rhdr := NewHeaders(r.Header).DropHopByHopHeaders().SimplifyCookies().Flatten("hdr-")
+
+	// Need to create a URL from the RequestURI, because the URL in the request is overwritten
+	// by oxy's RoundRobin and loses Path and RawQuery
+	u, _ := url.ParseRequestURI(r.RequestURI)
+
 	req := audittypes.DataMap{
 		audittypes.Host:       r.Host,
 		audittypes.Method:     r.Method,
-		audittypes.Path:       r.URL.Path,
-		audittypes.Query:      r.URL.RawQuery,
+		audittypes.Path:       u.Path,
+		audittypes.Query:      u.RawQuery,
 		audittypes.RemoteAddr: r.RemoteAddr,
 		audittypes.BeganAt:    audittypes.TheClock.Now().UTC(),
 	}
