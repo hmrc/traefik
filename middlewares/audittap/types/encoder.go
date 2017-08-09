@@ -1,4 +1,4 @@
-package audittypes
+package types
 
 // Encoder describes any type that can be encoded as an array of bytes
 // in order to be sent as the key or value of a Kafka message. Length() is provided as
@@ -13,6 +13,11 @@ type Encoder interface {
 type Encoded struct {
 	Bytes []byte
 	Err   error
+}
+
+// Encodeable specifies a type that can be transform itself to Encoded
+type Encodeable interface {
+	ToEncoded() Encoded
 }
 
 // Encode encodes the type as an array of bytes

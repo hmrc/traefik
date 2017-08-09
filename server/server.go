@@ -28,6 +28,7 @@ import (
 	"github.com/containous/traefik/middlewares/audittap"
 	"github.com/containous/traefik/middlewares/audittap/audittypes"
 	"github.com/containous/traefik/middlewares/audittap/streams"
+	at "github.com/containous/traefik/middlewares/audittap/types"
 	"github.com/containous/traefik/middlewares/headers"
 	"github.com/containous/traefik/provider"
 	"github.com/containous/traefik/safe"
@@ -1006,7 +1007,7 @@ func (server *Server) initalizeAuditStreams() {
 
 		switch server.globalConfiguration.AuditSink.Type {
 		case "AMQP":
-			messages := make(chan audittypes.Encoded, server.globalConfiguration.AuditSink.ChannelLength)
+			messages := make(chan at.Encoded, server.globalConfiguration.AuditSink.ChannelLength)
 			as, err = streams.NewAmqpSink(server.globalConfiguration.AuditSink, messages)
 			if err != nil {
 				log.Fatal("Error creating new AMQP Sink: ", err)
@@ -1017,7 +1018,7 @@ func (server *Server) initalizeAuditStreams() {
 			return
 		}
 
-		astr := streams.NewAuditStream(streams.DirectJSONRenderer, as)
+		astr := streams.NewAuditStream(as)
 		server.auditStreams = append(server.auditStreams, astr)
 	} else {
 		log.Warn("No audit sink info")

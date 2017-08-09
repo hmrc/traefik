@@ -1,5 +1,5 @@
-hash: c90820b15b6a5910f194e7e7b57599c13e72253fd14a4a1176baaa947feb581f
-updated: 2017-06-30T08:22:05.959820919+01:00
+hash: 9e911a9c2e379db19a5403caada8f27dd7bb5a27b3f66ce38a3613bacd8811e1
+updated: 2017-08-01T14:56:03.046921502+01:00
 imports:
 - name: cloud.google.com/go
   version: 2e6a95edb1071d750f6d7db777bf66cd2997af6c
@@ -575,6 +575,8 @@ imports:
   - stats
   - tap
   - transport
+- name: gopkg.in/beevik/etree.v0
+  version: abae5fc32af8862e420d52e686a7e6ec14111685
 - name: gopkg.in/fsnotify.v1
   version: 629574ca2a5df945712d3079857300b5e4da0236
 - name: gopkg.in/inf.v0
