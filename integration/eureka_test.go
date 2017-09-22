@@ -1,10 +1,9 @@
-package main
+package integration
 
 import (
 	"bytes"
 	"net/http"
 	"os"
-	"os/exec"
 	"strings"
 	"text/template"
 	"time"
@@ -41,7 +40,8 @@ func (s *EurekaSuite) TestSimpleConfiguration(c *check.C) {
 
 	file := s.adaptFile(c, "fixtures/eureka/simple.toml", struct{ EurekaHost string }{s.eurekaIP})
 	defer os.Remove(file)
-	cmd := exec.Command(traefikBinary, "--configFile="+file)
+	cmd, display := s.traefikCmd(withConfigFile(file))
+	defer display(c)
 	err := cmd.Start()
 	c.Assert(err, checker.IsNil)
 	defer cmd.Process.Kill()

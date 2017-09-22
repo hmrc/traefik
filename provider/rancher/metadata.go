@@ -38,13 +38,13 @@ func (p *Provider) metadataProvide(configurationChan chan<- types.ConfigMessage,
 			updateConfiguration := func(version string) {
 				log.WithField("metadata_version", version).Debugln("Refreshing configuration from Rancher metadata service")
 
-				services, err := client.GetServices()
+				stacks, err := client.GetStacks()
 				if err != nil {
 					log.Errorf("Failed to query Rancher metadata service: %s", err)
 					return
 				}
 
-				rancherData := parseMetadataSourcedRancherData(services)
+				rancherData := parseMetadataSourcedRancherData(stacks)
 				configuration := p.loadRancherConfig(rancherData)
 				configurationChan <- types.ConfigMessage{
 					ProviderName:  "rancher",
@@ -112,25 +112,29 @@ func (p *Provider) longPoll(client rancher.Client, updateConfiguration func(stri
 	// Holds the connection until there is either a change in the metadata
 	// repository or `p.RefreshSeconds` has elapsed. Long polling should be
 	// favoured for the most accurate configuration updates.
-	go client.OnChange(p.RefreshSeconds, updateConfiguration)
+	safe.Go(func() {
+		client.OnChange(p.RefreshSeconds, updateConfiguration)
+	})
 	<-stop
 }
 
-func parseMetadataSourcedRancherData(services []rancher.Service) (rancherDataList []rancherData) {
-	for _, service := range services {
-		var containerIPAddresses []string
-		for _, container := range service.Containers {
-			if containerFilter(container.Name, container.HealthState, container.State) {
-				containerIPAddresses = append(containerIPAddresses, container.PrimaryIp)
+func parseMetadataSourcedRancherData(stacks []rancher.Stack) (rancherDataList []rancherData) {
+	for _, stack := range stacks {
+		for _, service := range stack.Services {
+			var containerIPAddresses []string
+			for _, container := range service.Containers {
+				if containerFilter(container.Name, container.HealthState, container.State) {
+					containerIPAddresses = append(containerIPAddresses, container.PrimaryIp)
+				}
 			}
-		}
 
-		rancherDataList = append(rancherDataList, rancherData{
-			Name:       service.Name,
-			State:      service.State,
-			Labels:     service.Labels,
-			Containers: containerIPAddresses,
-		})
+			rancherDataList = append(rancherDataList, rancherData{
+				Name:       stack.Name + "/" + service.Name,
+				State:      service.State,
+				Labels:     service.Labels,
+				Containers: containerIPAddresses,
+			})
+		}
 	}
 	return rancherDataList
 }

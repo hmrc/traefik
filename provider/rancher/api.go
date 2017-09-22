@@ -10,13 +10,16 @@ import (
 	"github.com/containous/traefik/log"
 	"github.com/containous/traefik/safe"
 	"github.com/containous/traefik/types"
-
+	"github.com/mitchellh/mapstructure"
 	rancher "github.com/rancher/go-rancher/client"
 )
 
-var (
-	withoutPagination *rancher.ListOpts
+const (
+	labelRancherStackServiceName = "io.rancher.stack_service.name"
+	hostNetwork                  = "host"
 )
+
+var withoutPagination *rancher.ListOpts
 
 // APIConfiguration contains configuration properties specific to the Rancher
 // API provider.
@@ -126,14 +129,14 @@ func (p *Provider) apiProvide(configurationChan chan<- types.ConfigMessage, pool
 	return nil
 }
 
-func listRancherEnvironments(client *rancher.RancherClient) []*rancher.Project {
+func listRancherEnvironments(client *rancher.RancherClient) []*rancher.Environment {
 
-	// Rancher Environment in frontend UI is actually project in API
+	// Rancher Environment in frontend UI is actually a stack
 	// https://forums.rancher.com/t/api-key-for-all-environments/279/9
 
-	var environmentList = []*rancher.Project{}
+	var environmentList = []*rancher.Environment{}
 
-	environments, err := client.Project.List(nil)
+	environments, err := client.Environment.List(nil)
 
 	if err != nil {
 		log.Errorf("Cannot get Rancher Environments %+v", err)
@@ -194,12 +197,13 @@ func listRancherContainer(client *rancher.RancherClient) []*rancher.Container {
 	return containerList
 }
 
-func parseAPISourcedRancherData(environments []*rancher.Project, services []*rancher.Service, containers []*rancher.Container) []rancherData {
+func parseAPISourcedRancherData(environments []*rancher.Environment, services []*rancher.Service, containers []*rancher.Container) []rancherData {
 	var rancherDataList []rancherData
 
 	for _, environment := range environments {
 
 		for _, service := range services {
+
 			if service.EnvironmentId != environment.Id {
 				continue
 			}
@@ -221,9 +225,24 @@ func parseAPISourcedRancherData(environments []*rancher.Project, services []*ran
 			}
 
 			for _, container := range containers {
-				if container.Labels["io.rancher.stack_service.name"] == rancherData.Name &&
+				if container.Labels[labelRancherStackServiceName] == rancherData.Name &&
 					containerFilter(container.Name, container.HealthState, container.State) {
-					rancherData.Containers = append(rancherData.Containers, container.PrimaryIpAddress)
+
+					if container.NetworkMode == hostNetwork {
+						var endpoints []*rancher.PublicEndpoint
+						err := mapstructure.Decode(service.PublicEndpoints, &endpoints)
+
+						if err != nil {
+							log.Errorf("Failed to decode PublicEndpoint: %v", err)
+							continue
+						}
+
+						if len(endpoints) > 0 {
+							rancherData.Containers = append(rancherData.Containers, endpoints[0].IpAddress)
+						}
+					} else {
+						rancherData.Containers = append(rancherData.Containers, container.PrimaryIpAddress)
+					}
 				}
 			}
 			rancherDataList = append(rancherDataList, rancherData)

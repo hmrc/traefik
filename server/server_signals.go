@@ -26,8 +26,8 @@ func (server *Server) listenSignals() {
 				}
 			}
 
-			if err := log.Rotate(); err != nil {
-				log.Errorf("Error rotating error log: %s", err)
+			if err := log.RotateFile(); err != nil {
+				log.Errorf("Error rotating traefik log: %s", err)
 			}
 		default:
 			log.Infof("I have to go... %+v", sig)
