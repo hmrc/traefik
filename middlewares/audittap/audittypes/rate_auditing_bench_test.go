@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-const saMsgXml string = `
+const saMsgXML string = `
 <?xml version="1.0" encoding="UTF-8"?>
 <GovTalkMessage xmlns="http://www.govtalk.gov.uk/CM/envelope">
 	<EnvelopeVersion>2.0</EnvelopeVersion>
@@ -18,7 +18,7 @@ const saMsgXml string = `
 			<Qualifier>request</Qualifier>
 			<Function>submit</Function>
 			<TransactionID/>
-			<CorrelationID>CF53E1122A4347A5A1289B33659EC1AA</CorrelationID>
+			<CorrelationID>CF53E1122A4347A5A1289B33659git diffEC1AA</CorrelationID>
 			<ResponseEndPoint>IR-SERVICE-ENDPOINT-EXTRA-4</ResponseEndPoint>
 			<Transformation>XML</Transformation>
 			<GatewayTimestamp>2016-03-11T10:49:00.763</GatewayTimestamp>
@@ -476,7 +476,7 @@ func benchWithPayload(b *testing.B, payloadKbs int) {
 }
 
 func messageWithPayload(payloadKbs int) io.ReadCloser {
-	xml := saMsgXml
+	xml := saMsgXML
 	if i := strings.Index(xml, "</Attachment>"); i != -1 {
 		lenSlice := payloadKbs * 1024
 		dat := make([]byte, lenSlice, lenSlice)
