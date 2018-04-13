@@ -166,6 +166,7 @@ ignored = [
 [[constraint]]
   name = "gopkg.in/fsnotify.v1"
   version = "1.4.2"
+  source = "https://github.com/fsnotify/fsnotify"
 
 [[constraint]]
   name = "k8s.io/client-go"
