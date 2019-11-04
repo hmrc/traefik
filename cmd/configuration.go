@@ -4,11 +4,12 @@ import (
 	"time"
 
 	"github.com/containous/flaeg"
-	"github.com/containous/traefik-extra-service-fabric"
+	servicefabric "github.com/containous/traefik-extra-service-fabric"
 	"github.com/containous/traefik/api"
 	"github.com/containous/traefik/configuration"
 	"github.com/containous/traefik/middlewares/accesslog"
 	"github.com/containous/traefik/middlewares/tracing"
+	"github.com/containous/traefik/middlewares/tracing/datadog"
 	"github.com/containous/traefik/middlewares/tracing/jaeger"
 	"github.com/containous/traefik/middlewares/tracing/zipkin"
 	"github.com/containous/traefik/ping"
@@ -45,6 +46,7 @@ func NewTraefikDefaultPointersConfiguration() *TraefikConfiguration {
 	defaultDocker.ExposedByDefault = true
 	defaultDocker.Endpoint = "unix:///var/run/docker.sock"
 	defaultDocker.SwarmMode = false
+	defaultDocker.SwarmModeRefreshSeconds = 15
 
 	// default File
 	var defaultFile file.Provider
@@ -78,6 +80,7 @@ func NewTraefikDefaultPointersConfiguration() *TraefikConfiguration {
 		},
 		InfluxDB: &types.InfluxDB{
 			Address:      "localhost:8089",
+			Protocol:     "udp",
 			PushInterval: "10s",
 		},
 	}
@@ -88,7 +91,9 @@ func NewTraefikDefaultPointersConfiguration() *TraefikConfiguration {
 	defaultMarathon.Endpoint = "http://127.0.0.1:8080"
 	defaultMarathon.ExposedByDefault = true
 	defaultMarathon.Constraints = types.Constraints{}
-	defaultMarathon.DialerTimeout = flaeg.Duration(60 * time.Second)
+	defaultMarathon.DialerTimeout = flaeg.Duration(5 * time.Second)
+	defaultMarathon.ResponseHeaderTimeout = flaeg.Duration(60 * time.Second)
+	defaultMarathon.TLSHandshakeTimeout = flaeg.Duration(5 * time.Second)
 	defaultMarathon.KeepAlive = flaeg.Duration(10 * time.Second)
 
 	// default Consul
@@ -105,6 +110,8 @@ func NewTraefikDefaultPointersConfiguration() *TraefikConfiguration {
 	defaultConsulCatalog.Constraints = types.Constraints{}
 	defaultConsulCatalog.Prefix = "traefik"
 	defaultConsulCatalog.FrontEndRule = "Host:{{.ServiceName}}.{{.Domain}}"
+	defaultConsulCatalog.Stale = false
+	defaultConsulCatalog.StrictChecks = true
 
 	// default Etcd
 	var defaultEtcd etcd.Provider
@@ -214,19 +221,27 @@ func NewTraefikDefaultPointersConfiguration() *TraefikConfiguration {
 
 	// default Tracing
 	defaultTracing := tracing.Tracing{
-		Backend:     "jaeger",
-		ServiceName: "traefik",
+		Backend:       "jaeger",
+		ServiceName:   "traefik",
+		SpanNameLimit: 0,
 		Jaeger: &jaeger.Config{
-			SamplingServerURL:  "http://localhost:5778/sampling",
-			SamplingType:       "const",
-			SamplingParam:      1.0,
-			LocalAgentHostPort: "127.0.0.1:6831",
+			SamplingServerURL:      "http://localhost:5778/sampling",
+			SamplingType:           "const",
+			SamplingParam:          1.0,
+			LocalAgentHostPort:     "127.0.0.1:6831",
+			TraceContextHeaderName: "uber-trace-id",
 		},
 		Zipkin: &zipkin.Config{
 			HTTPEndpoint: "http://localhost:9411/api/v1/spans",
 			SameSpan:     false,
 			ID128Bit:     true,
 			Debug:        false,
+		},
+		DataDog: &datadog.Config{
+			LocalAgentHostPort: "localhost:8126",
+			GlobalTag:          "",
+			Debug:              false,
+			PrioritySampling:   false,
 		},
 	}
 
@@ -260,8 +275,15 @@ func NewTraefikDefaultPointersConfiguration() *TraefikConfiguration {
 		},
 		InfluxDB: &types.InfluxDB{
 			Address:      "localhost:8089",
+			Protocol:     "udp",
 			PushInterval: "10s",
 		},
+	}
+
+	defaultResolver := configuration.HostResolverConfig{
+		CnameFlattening: false,
+		ResolvConfig:    "/etc/resolv.conf",
+		ResolvDepth:     5,
 	}
 
 	defaultConfiguration := configuration.GlobalConfiguration{
@@ -292,6 +314,7 @@ func NewTraefikDefaultPointersConfiguration() *TraefikConfiguration {
 		API:                &defaultAPI,
 		Metrics:            &defaultMetrics,
 		Tracing:            &defaultTracing,
+		HostResolver:       &defaultResolver,
 	}
 
 	return &TraefikConfiguration{

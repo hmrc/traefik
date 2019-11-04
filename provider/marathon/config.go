@@ -32,13 +32,14 @@ func (p *Provider) buildConfigurationV2(applications *marathon.Applications) *ty
 		"getBackendName": p.getBackendName,
 
 		// Backend functions
-		"getPort":           getPort,
-		"getCircuitBreaker": label.GetCircuitBreaker,
-		"getLoadBalancer":   label.GetLoadBalancer,
-		"getMaxConn":        label.GetMaxConn,
-		"getHealthCheck":    label.GetHealthCheck,
-		"getBuffering":      label.GetBuffering,
-		"getServers":        p.getServers,
+		"getPort":               getPort,
+		"getCircuitBreaker":     label.GetCircuitBreaker,
+		"getLoadBalancer":       label.GetLoadBalancer,
+		"getMaxConn":            label.GetMaxConn,
+		"getHealthCheck":        label.GetHealthCheck,
+		"getBuffering":          label.GetBuffering,
+		"getResponseForwarding": label.GetResponseForwarding,
+		"getServers":            p.getServers,
 
 		// Frontend functions
 		"getSegmentNameSuffix": getSegmentNameSuffix,
@@ -46,9 +47,11 @@ func (p *Provider) buildConfigurationV2(applications *marathon.Applications) *ty
 		"getFrontendName":      p.getFrontendName,
 		"getPassHostHeader":    label.GetFuncBool(label.TraefikFrontendPassHostHeader, label.DefaultPassHostHeader),
 		"getPassTLSCert":       label.GetFuncBool(label.TraefikFrontendPassTLSCert, label.DefaultPassTLSCert),
+		"getPassTLSClientCert": label.GetTLSClientCert,
 		"getPriority":          label.GetFuncInt(label.TraefikFrontendPriority, label.DefaultFrontendPriority),
 		"getEntryPoints":       label.GetFuncSliceString(label.TraefikFrontendEntryPoints),
-		"getBasicAuth":         label.GetFuncSliceString(label.TraefikFrontendAuthBasic),
+		"getBasicAuth":         label.GetFuncSliceString(label.TraefikFrontendAuthBasic), // Deprecated
+		"getAuth":              label.GetAuth,
 		"getRedirect":          label.GetRedirect,
 		"getErrorPages":        label.GetErrorPages,
 		"getRateLimit":         label.GetRateLimit,
@@ -212,11 +215,14 @@ func (p *Provider) getFrontendRule(app appData) string {
 	}
 
 	domain := label.GetStringValue(app.SegmentLabels, label.TraefikDomain, p.Domain)
+	if len(domain) > 0 {
+		domain = "." + domain
+	}
 
 	if len(app.SegmentName) > 0 {
-		return "Host:" + strings.ToLower(provider.Normalize(app.SegmentName)) + "." + p.getSubDomain(app.ID) + "." + domain
+		return "Host:" + strings.ToLower(provider.Normalize(app.SegmentName)) + "." + p.getSubDomain(app.ID) + domain
 	}
-	return "Host:" + p.getSubDomain(app.ID) + "." + domain
+	return "Host:" + p.getSubDomain(app.ID) + domain
 }
 
 func getPort(task marathon.Task, app appData) string {
@@ -347,7 +353,16 @@ func (p *Provider) getServer(app appData, task marathon.Task) (string, *types.Se
 }
 
 func (p *Provider) getServerHost(task marathon.Task, app appData) (string, error) {
-	if app.IPAddressPerTask == nil || p.ForceTaskHostname {
+	networks := app.Networks
+	var hostFlag bool
+
+	if networks == nil {
+		hostFlag = app.IPAddressPerTask == nil
+	} else {
+		hostFlag = (*networks)[0].Mode != marathon.ContainerNetworkMode
+	}
+
+	if hostFlag || p.ForceTaskHostname {
 		if len(task.Host) == 0 {
 			return "", fmt.Errorf("host is undefined for task %q app %q", task.ID, app.ID)
 		}

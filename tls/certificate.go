@@ -16,36 +16,41 @@ import (
 var (
 	// MinVersion Map of allowed TLS minimum versions
 	MinVersion = map[string]uint16{
-		`VersionTLS10`: tls.VersionTLS10,
-		`VersionTLS11`: tls.VersionTLS11,
-		`VersionTLS12`: tls.VersionTLS12,
+		"VersionTLS10": tls.VersionTLS10,
+		"VersionTLS11": tls.VersionTLS11,
+		"VersionTLS12": tls.VersionTLS12,
+		"VersionTLS13": tls.VersionTLS13,
 	}
 
 	// CipherSuites Map of TLS CipherSuites from crypto/tls
 	// Available CipherSuites defined at https://golang.org/pkg/crypto/tls/#pkg-constants
 	CipherSuites = map[string]uint16{
-		`TLS_RSA_WITH_RC4_128_SHA`:                tls.TLS_RSA_WITH_RC4_128_SHA,
-		`TLS_RSA_WITH_3DES_EDE_CBC_SHA`:           tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
-		`TLS_RSA_WITH_AES_128_CBC_SHA`:            tls.TLS_RSA_WITH_AES_128_CBC_SHA,
-		`TLS_RSA_WITH_AES_256_CBC_SHA`:            tls.TLS_RSA_WITH_AES_256_CBC_SHA,
-		`TLS_RSA_WITH_AES_128_CBC_SHA256`:         tls.TLS_RSA_WITH_AES_128_CBC_SHA256,
-		`TLS_RSA_WITH_AES_128_GCM_SHA256`:         tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
-		`TLS_RSA_WITH_AES_256_GCM_SHA384`:         tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
-		`TLS_ECDHE_ECDSA_WITH_RC4_128_SHA`:        tls.TLS_ECDHE_ECDSA_WITH_RC4_128_SHA,
-		`TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA`:    tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
-		`TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA`:    tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
-		`TLS_ECDHE_RSA_WITH_RC4_128_SHA`:          tls.TLS_ECDHE_RSA_WITH_RC4_128_SHA,
-		`TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA`:     tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
-		`TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA`:      tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
-		`TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA`:      tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-		`TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256`: tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
-		`TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256`:   tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
-		`TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256`:   tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-		`TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256`: tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-		`TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384`:   tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-		`TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384`: tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-		`TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305`:    tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
-		`TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305`:  tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+		"TLS_RSA_WITH_RC4_128_SHA":                tls.TLS_RSA_WITH_RC4_128_SHA,
+		"TLS_RSA_WITH_3DES_EDE_CBC_SHA":           tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
+		"TLS_RSA_WITH_AES_128_CBC_SHA":            tls.TLS_RSA_WITH_AES_128_CBC_SHA,
+		"TLS_RSA_WITH_AES_256_CBC_SHA":            tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+		"TLS_RSA_WITH_AES_128_CBC_SHA256":         tls.TLS_RSA_WITH_AES_128_CBC_SHA256,
+		"TLS_RSA_WITH_AES_128_GCM_SHA256":         tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+		"TLS_RSA_WITH_AES_256_GCM_SHA384":         tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+		"TLS_ECDHE_ECDSA_WITH_RC4_128_SHA":        tls.TLS_ECDHE_ECDSA_WITH_RC4_128_SHA,
+		"TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA":    tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+		"TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA":    tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+		"TLS_ECDHE_RSA_WITH_RC4_128_SHA":          tls.TLS_ECDHE_RSA_WITH_RC4_128_SHA,
+		"TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA":     tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
+		"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA":      tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+		"TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA":      tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+		"TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256": tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
+		"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256":   tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
+		"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256":   tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+		"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256": tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+		"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384":   tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+		"TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384": tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+		"TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305":    tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+		"TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305":  tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
+		"TLS_AES_128_GCM_SHA256":                  tls.TLS_AES_128_GCM_SHA256,
+		"TLS_AES_256_GCM_SHA384":                  tls.TLS_AES_256_GCM_SHA384,
+		"TLS_CHACHA20_POLY1305_SHA256":            tls.TLS_CHACHA20_POLY1305_SHA256,
+		"TLS_FALLBACK_SCSV":                       tls.TLS_FALLBACK_SCSV,
 	}
 )
 
@@ -102,7 +107,7 @@ func (c *Certificates) CreateTLSConfig(entryPointName string) (*tls.Config, erro
 		config.Certificates = append(config.Certificates, *cert)
 	} else {
 		for _, certificate := range *c {
-			err := certificate.AppendCertificates(domainsCertificates, entryPointName)
+			err := certificate.AppendCertificate(domainsCertificates, entryPointName)
 			if err != nil {
 				log.Errorf("Unable to add a certificate to the entryPoint %q : %v", entryPointName, err)
 				continue
@@ -133,8 +138,8 @@ func (c *Certificates) isEmpty() bool {
 	return key == len(*c)
 }
 
-// AppendCertificates appends a Certificate to a certificates map sorted by entrypoints
-func (c *Certificate) AppendCertificates(certs map[string]map[string]*tls.Certificate, ep string) error {
+// AppendCertificate appends a Certificate to a certificates map keyed by entrypoint.
+func (c *Certificate) AppendCertificate(certs map[string]map[string]*tls.Certificate, ep string) error {
 
 	certContent, err := c.CertFile.Read()
 	if err != nil {
@@ -152,16 +157,28 @@ func (c *Certificate) AppendCertificates(certs map[string]map[string]*tls.Certif
 
 	parsedCert, _ := x509.ParseCertificate(tlsCert.Certificate[0])
 
-	certKey := parsedCert.Subject.CommonName
+	var SANs []string
+	if parsedCert.Subject.CommonName != "" {
+		SANs = append(SANs, strings.ToLower(parsedCert.Subject.CommonName))
+	}
 	if parsedCert.DNSNames != nil {
 		sort.Strings(parsedCert.DNSNames)
 		for _, dnsName := range parsedCert.DNSNames {
 			if dnsName != parsedCert.Subject.CommonName {
-				certKey += fmt.Sprintf(",%s", dnsName)
+				SANs = append(SANs, strings.ToLower(dnsName))
 			}
 		}
 
 	}
+	if parsedCert.IPAddresses != nil {
+		for _, ip := range parsedCert.IPAddresses {
+			if ip.String() != parsedCert.Subject.CommonName {
+				SANs = append(SANs, strings.ToLower(ip.String()))
+			}
+		}
+
+	}
+	certKey := strings.Join(SANs, ",")
 
 	certExists := false
 	if certs[ep] == nil {
@@ -175,13 +192,24 @@ func (c *Certificate) AppendCertificates(certs map[string]map[string]*tls.Certif
 		}
 	}
 	if certExists {
-		log.Warnf("Into EntryPoint %s, try to add certificate for domains which already have this certificate (%s). The new certificate will not be append to the EntryPoint.", ep, certKey)
+		log.Warnf("Skipping addition of certificate for domain(s) %q, to EntryPoint %s, as it already exists for this Entrypoint.", certKey, ep)
 	} else {
-		log.Debugf("Add certificate for domains %s", certKey)
+		log.Debugf("Adding certificate for domain(s) %s", certKey)
 		certs[ep][certKey] = &tlsCert
 	}
 
 	return err
+}
+
+func (c *Certificate) getTruncatedCertificateName() string {
+	certName := c.CertFile.String()
+
+	// Truncate certificate information only if it's a well formed certificate content with more than 50 characters
+	if !c.CertFile.IsPath() && strings.HasPrefix(certName, certificateHeader) && len(certName) > len(certificateHeader)+50 {
+		certName = strings.TrimPrefix(c.CertFile.String(), certificateHeader)[:50]
+	}
+
+	return certName
 }
 
 // String is the method to format the flag's value, part of the flag.Value interface.

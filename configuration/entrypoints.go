@@ -106,14 +106,16 @@ func makeEntryPointAuth(result map[string]string) *types.Auth {
 	var basic *types.Basic
 	if v, ok := result["auth_basic_users"]; ok {
 		basic = &types.Basic{
-			Users: strings.Split(v, ","),
+			Users:        strings.Split(v, ","),
+			RemoveHeader: toBool(result, "auth_basic_removeheader"),
 		}
 	}
 
 	var digest *types.Digest
 	if v, ok := result["auth_digest_users"]; ok {
 		digest = &types.Digest{
-			Users: strings.Split(v, ","),
+			Users:        strings.Split(v, ","),
+			RemoveHeader: toBool(result, "auth_digest_removeheader"),
 		}
 	}
 
@@ -135,10 +137,16 @@ func makeEntryPointAuth(result map[string]string) *types.Auth {
 			}
 		}
 
+		var authResponseHeaders []string
+		if v, ok := result["auth_forward_authresponseheaders"]; ok {
+			authResponseHeaders = strings.Split(v, ",")
+		}
+
 		forward = &types.Forward{
-			Address:            address,
-			TLS:                clientTLS,
-			TrustForwardHeader: toBool(result, "auth_forward_trustforwardheader"),
+			Address:             address,
+			TLS:                 clientTLS,
+			TrustForwardHeader:  toBool(result, "auth_forward_trustforwardheader"),
+			AuthResponseHeaders: authResponseHeaders,
 		}
 	}
 
@@ -224,12 +232,34 @@ func makeEntryPointTLS(result map[string]string) (*tls.TLS, error) {
 		}
 	}
 
-	if len(result["ca"]) > 0 {
-		files := strings.Split(result["ca"], ",")
-		optional := toBool(result, "ca_optional")
-		configTLS.ClientCA = tls.ClientCA{
-			Files:    files,
-			Optional: optional,
+	if configTLS != nil {
+		if len(result["ca"]) > 0 {
+			files := tls.FilesOrContents{}
+			files.Set(result["ca"])
+			optional := toBool(result, "ca_optional")
+			configTLS.ClientCA = tls.ClientCA{
+				Files:    files,
+				Optional: optional,
+			}
+		}
+
+		if len(result["tls_minversion"]) > 0 {
+			configTLS.MinVersion = result["tls_minversion"]
+		}
+
+		if len(result["tls_ciphersuites"]) > 0 {
+			configTLS.CipherSuites = strings.Split(result["tls_ciphersuites"], ",")
+		}
+
+		if len(result["tls_snistrict"]) > 0 {
+			configTLS.SniStrict = toBool(result, "tls_snistrict")
+		}
+
+		if len(result["tls_defaultcertificate_cert"]) > 0 && len(result["tls_defaultcertificate_key"]) > 0 {
+			configTLS.DefaultCertificate = &tls.Certificate{
+				CertFile: tls.FileOrContent(result["tls_defaultcertificate_cert"]),
+				KeyFile:  tls.FileOrContent(result["tls_defaultcertificate_key"]),
+			}
 		}
 	}
 

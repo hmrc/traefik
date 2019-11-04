@@ -17,14 +17,16 @@ import (
 	"github.com/containous/traefik/log"
 	acmeprovider "github.com/containous/traefik/provider/acme"
 	"github.com/containous/traefik/types"
-	"github.com/xenolf/lego/acme"
+	"github.com/go-acme/lego/certcrypto"
+	"github.com/go-acme/lego/registration"
 )
 
 // Account is used to store lets encrypt registration info
 type Account struct {
 	Email              string
-	Registration       *acme.RegistrationResource
+	Registration       *registration.Resource
 	PrivateKey         []byte
+	KeyType            certcrypto.KeyType
 	DomainsCertificate DomainsCertificates
 	ChallengeCerts     map[string]*ChallengeCert
 	HTTPChallenge      map[string]map[string][]byte
@@ -70,7 +72,9 @@ func (a *Account) Init() error {
 }
 
 // NewAccount creates an account
-func NewAccount(email string, certs []*DomainsCertificate) (*Account, error) {
+func NewAccount(email string, certs []*DomainsCertificate, keyTypeValue string) (*Account, error) {
+	keyType := acmeprovider.GetKeyType(keyTypeValue)
+
 	// Create a user. New accounts need an email and private key to start
 	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
@@ -86,6 +90,7 @@ func NewAccount(email string, certs []*DomainsCertificate) (*Account, error) {
 	return &Account{
 		Email:              email,
 		PrivateKey:         x509.MarshalPKCS1PrivateKey(privateKey),
+		KeyType:            keyType,
 		DomainsCertificate: DomainsCertificates{Certs: domainsCerts.Certs},
 		ChallengeCerts:     map[string]*ChallengeCert{}}, nil
 }
@@ -96,7 +101,7 @@ func (a *Account) GetEmail() string {
 }
 
 // GetRegistration returns lets encrypt registration resource
-func (a *Account) GetRegistration() *acme.RegistrationResource {
+func (a *Account) GetRegistration() *registration.Resource {
 	return a.Registration
 }
 
@@ -183,7 +188,7 @@ func (dc *DomainsCertificates) removeDuplicates() {
 }
 
 func (dc *DomainsCertificates) removeEmpty() {
-	certs := []*DomainsCertificate{}
+	var certs []*DomainsCertificate
 	for _, cert := range dc.Certs {
 		if cert.Certificate != nil && len(cert.Certificate.Certificate) > 0 && len(cert.Certificate.PrivateKey) > 0 {
 			certs = append(certs, cert)

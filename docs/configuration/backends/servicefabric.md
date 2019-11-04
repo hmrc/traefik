@@ -1,6 +1,6 @@
 # Azure Service Fabric Provider
 
-Træfik can be configured to use Azure Service Fabric as a provider.
+Traefik can be configured to use Azure Service Fabric as a provider.
 
 See [this repository for an example deployment package and further documentation.](https://aka.ms/traefikonsf)
 
@@ -47,13 +47,13 @@ refreshSeconds = 10
 
 ## Labels
 
-The provider uses labels to configure how services are exposed through Træfik.
+The provider uses labels to configure how services are exposed through Traefik.
 These can be set using Extensions and the Property Manager API
 
 #### Extensions
 
 Set labels with extensions through the services `ServiceManifest.xml` file.
-Here is an example of an extension setting Træfik labels:
+Here is an example of an extension setting Traefik labels:
 
 ```xml
 <StatelessServiceType ServiceTypeName="WebServiceType">
@@ -68,6 +68,8 @@ Here is an example of an extension setting Træfik labels:
   </Extensions>
 </StatelessServiceType>
 ```
+
+> **Note**: The `Label` tag and its `Key` attribute are case sensitive. That is, if you use `label` instead of `Label` or `key` instead of `Key`, they will be silently ignored.
 
 #### Property Manager
 
@@ -96,14 +98,17 @@ Labels, set through extensions or the property manager, can be used on services 
 
 | Label                                                      | Description                                                                                                                                                                                                               |
 |------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `traefik.enable=false`                                     | Disable this container in Træfik                                                                                                                                                                                          |
+| `traefik.enable=false`                                     | Disable this container in Traefik                                                                                                                                                                                         |
 | `traefik.backend.circuitbreaker.expression=EXPR`           | Create a [circuit breaker](/basics/#backends) to be used against the backend                                                                                                                                              |
-| `traefik.servicefabric.groupname`                               | Group all services with the same name into a single backend in Træfik                                                                                                                                                     |
-| `traefik.servicefabric.groupweight`                             | Set the weighting of the current services nodes in the backend group                                                                                                                                                      |
-| `traefik.servicefabric.enablelabeloverrides`                             | Toggle whether labels can be overridden using the Service Fabric Property Manager API                                                                                                                                                      |
+| `traefik.servicefabric.groupname`                          | Group all services with the same name into a single backend in Traefik                                                                                                                                                    |
+| `traefik.servicefabric.groupweight`                        | Set the weighting of the current services nodes in the backend group                                                                                                                                                      |
+| `traefik.servicefabric.enablelabeloverrides`               | Toggle whether labels can be overridden using the Service Fabric Property Manager API                                                                                                                                     |
+| `traefik.servicefabric.endpointname`                       | Specify the name of the endpoint                                                                                                                                                                                          |
 | `traefik.backend.healthcheck.path=/health`                 | Enable health check for the backend, hitting the container at `path`.                                                                                                                                                     |
 | `traefik.backend.healthcheck.port=8080`                    | Allow to use a different port for the health check.                                                                                                                                                                       |
 | `traefik.backend.healthcheck.interval=1s`                  | Define the health check interval.                                                                                                                                                                                         |
+| `traefik.backend.healthcheck.hostname=foobar.com`          | Define the health check hostname.                                                                                                                                                                                         |
+| `traefik.backend.healthcheck.headers=EXPR`                 | Define the health check request headers <br>Format:  <code>HEADER:value&vert;&vert;HEADER2:value2</code>                                                                                                                  |
 | `traefik.backend.loadbalancer.method=drr`                  | Override the default `wrr` load balancer algorithm                                                                                                                                                                        |
 | `traefik.backend.loadbalancer.stickiness=true`             | Enable backend sticky sessions                                                                                                                                                                                            |
 | `traefik.backend.loadbalancer.stickiness.cookieName=NAME`  | Manually set the cookie name for sticky sessions                                                                                                                                                                          |
@@ -151,6 +156,6 @@ Labels, set through extensions or the property manager, can be used on services 
 | `traefik.frontend.headers.browserXSSFilter=true`         | Adds the X-XSS-Protection header with the value `1; mode=block`.                                                                                                                                    |
 | `traefik.frontend.headers.customBrowserXSSValue=VALUE`   | Set custom value for X-XSS-Protection header. This overrides the BrowserXssFilter option.                                                                                                           |
 | `traefik.frontend.headers.contentSecurityPolicy=VALUE`   | Adds CSP Header with the custom value.                                                                                                                                                              |
-| `traefik.frontend.headers.publicKey=VALUE`               | Adds pinned HTST public key header.                                                                                                                                                                 |
+| `traefik.frontend.headers.publicKey=VALUE`               | Adds HPKP header.                                                                                                                                                                                   |
 | `traefik.frontend.headers.referrerPolicy=VALUE`          | Adds referrer policy  header.                                                                                                                                                                       |
 | `traefik.frontend.headers.isDevelopment=false`           | This will cause the `AllowedHosts`, `SSLRedirect`, and `STSSeconds`/`STSIncludeSubdomains` options to be ignored during development.<br>When deploying to production, be sure to set this to false. |

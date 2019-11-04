@@ -48,6 +48,7 @@ func (p *Provider) buildConfiguration(services []ServiceItemExtended) (*types.Co
 		"getWhiteList":      getWhiteList,
 		"getHeaders":        getHeaders,
 		"getRedirect":       getRedirect,
+		"getErrorPages":     getErrorPages,
 
 		// SF Service Grouping
 		"getGroupedServices": getFuncServicesGroupedByLabel(traefikSFGroupName),
@@ -76,7 +77,7 @@ func getDefaultEndpoint(instance replicaInstance) string {
 	id, data := instance.GetReplicaData()
 	endpoint, err := getReplicaDefaultEndpoint(data)
 	if err != nil {
-		log.Warnf("No default endpoint for replica %s in service %s endpointData: %s", id, data.Address)
+		log.Warnf("No default endpoint for replica %s in service %s endpointData: %s", id, data.Address, err)
 		return ""
 	}
 	return endpoint
@@ -171,4 +172,8 @@ func getCircuitBreaker(service ServiceItemExtended) *types.CircuitBreaker {
 
 func getLoadBalancer(service ServiceItemExtended) *types.LoadBalancer {
 	return label.GetLoadBalancer(service.Labels)
+}
+
+func getErrorPages(service ServiceItemExtended) map[string]*types.ErrorPage {
+	return label.GetErrorPages(service.Labels)
 }

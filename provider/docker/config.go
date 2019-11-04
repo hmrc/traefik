@@ -33,27 +33,30 @@ func (p *Provider) buildConfigurationV2(containersInspected []dockerData) *types
 		"getDomain":        label.GetFuncString(label.TraefikDomain, p.Domain),
 
 		// Backend functions
-		"getIPAddress":      p.getIPAddress,
-		"getServers":        p.getServers,
-		"getMaxConn":        label.GetMaxConn,
-		"getHealthCheck":    label.GetHealthCheck,
-		"getBuffering":      label.GetBuffering,
-		"getCircuitBreaker": label.GetCircuitBreaker,
-		"getLoadBalancer":   label.GetLoadBalancer,
+		"getIPAddress":          p.getDeprecatedIPAddress, // TODO: Should we expose getIPPort instead?
+		"getServers":            p.getServers,
+		"getMaxConn":            label.GetMaxConn,
+		"getHealthCheck":        label.GetHealthCheck,
+		"getBuffering":          label.GetBuffering,
+		"getResponseForwarding": label.GetResponseForwarding,
+		"getCircuitBreaker":     label.GetCircuitBreaker,
+		"getLoadBalancer":       label.GetLoadBalancer,
 
 		// Frontend functions
-		"getBackendName":    getBackendName,
-		"getPriority":       label.GetFuncInt(label.TraefikFrontendPriority, label.DefaultFrontendPriority),
-		"getPassHostHeader": label.GetFuncBool(label.TraefikFrontendPassHostHeader, label.DefaultPassHostHeader),
-		"getPassTLSCert":    label.GetFuncBool(label.TraefikFrontendPassTLSCert, label.DefaultPassTLSCert),
-		"getEntryPoints":    label.GetFuncSliceString(label.TraefikFrontendEntryPoints),
-		"getBasicAuth":      label.GetFuncSliceString(label.TraefikFrontendAuthBasic),
-		"getFrontendRule":   p.getFrontendRule,
-		"getRedirect":       label.GetRedirect,
-		"getErrorPages":     label.GetErrorPages,
-		"getRateLimit":      label.GetRateLimit,
-		"getHeaders":        label.GetHeaders,
-		"getWhiteList":      label.GetWhiteList,
+		"getBackendName":       getBackendName,
+		"getPriority":          label.GetFuncInt(label.TraefikFrontendPriority, label.DefaultFrontendPriority),
+		"getPassHostHeader":    label.GetFuncBool(label.TraefikFrontendPassHostHeader, label.DefaultPassHostHeader),
+		"getPassTLSCert":       label.GetFuncBool(label.TraefikFrontendPassTLSCert, label.DefaultPassTLSCert),
+		"getPassTLSClientCert": label.GetTLSClientCert,
+		"getEntryPoints":       label.GetFuncSliceString(label.TraefikFrontendEntryPoints),
+		"getBasicAuth":         label.GetFuncSliceString(label.TraefikFrontendAuthBasic), // Deprecated
+		"getAuth":              label.GetAuth,
+		"getFrontendRule":      p.getFrontendRule,
+		"getRedirect":          label.GetRedirect,
+		"getErrorPages":        label.GetErrorPages,
+		"getRateLimit":         label.GetRateLimit,
+		"getHeaders":           label.GetHeaders,
+		"getWhiteList":         label.GetWhiteList,
 	}
 
 	// filter containers
@@ -184,20 +187,23 @@ func (p *Provider) getFrontendRule(container dockerData, segmentLabels map[strin
 	}
 
 	domain := label.GetStringValue(segmentLabels, label.TraefikDomain, p.Domain)
+	if len(domain) > 0 {
+		domain = "." + domain
+	}
 
 	if values, err := label.GetStringMultipleStrict(container.Labels, labelDockerComposeProject, labelDockerComposeService); err == nil {
-		return "Host:" + getSubDomain(values[labelDockerComposeService]+"."+values[labelDockerComposeProject]) + "." + domain
+		return "Host:" + getSubDomain(values[labelDockerComposeService]+"."+values[labelDockerComposeProject]) + domain
 	}
 
 	if len(domain) > 0 {
-		return "Host:" + getSubDomain(container.ServiceName) + "." + domain
+		return "Host:" + getSubDomain(container.ServiceName) + domain
 	}
 
 	return ""
 }
 
 func (p Provider) getIPAddress(container dockerData) string {
-	if value := label.GetStringValue(container.Labels, labelDockerNetwork, ""); value != "" {
+	if value := label.GetStringValue(container.Labels, labelDockerNetwork, p.Network); value != "" {
 		networkSettings := container.NetworkSettings
 		if networkSettings.Networks != nil {
 			network := networkSettings.Networks[value]
@@ -234,23 +240,22 @@ func (p Provider) getIPAddress(container dockerData) string {
 		return p.getIPAddress(parseContainer(containerInspected))
 	}
 
-	if p.UseBindPortIP {
-		port := getPortV1(container)
-		for netPort, portBindings := range container.NetworkSettings.Ports {
-			if string(netPort) == port+"/TCP" || string(netPort) == port+"/UDP" {
-				for _, p := range portBindings {
-					return p.HostIP
-				}
-			}
-		}
-	}
-
 	for _, network := range container.NetworkSettings.Networks {
 		return network.Addr
 	}
 
 	log.Warnf("Unable to find the IP address for the container %q.", container.Name)
 	return ""
+}
+
+// Deprecated: Please use getIPPort instead
+func (p *Provider) getDeprecatedIPAddress(container dockerData) string {
+	ip, _, err := p.getIPPort(container)
+	if err != nil {
+		log.Warn(err)
+		return ""
+	}
+	return ip
 }
 
 // Escape beginning slash "/", convert all others to dash "-", and convert underscores "_" to dash "-"
@@ -321,13 +326,55 @@ func getPort(container dockerData) string {
 	return ""
 }
 
+func (p *Provider) getPortBinding(container dockerData) (*nat.PortBinding, error) {
+	port := getPort(container)
+	for netPort, portBindings := range container.NetworkSettings.Ports {
+		if strings.EqualFold(string(netPort), port+"/TCP") || strings.EqualFold(string(netPort), port+"/UDP") {
+			for _, p := range portBindings {
+				return &p, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("unable to find the external IP:Port for the container %q", container.Name)
+}
+
+func (p *Provider) getIPPort(container dockerData) (string, string, error) {
+	var ip, port string
+	usedBound := false
+
+	if p.UseBindPortIP {
+		portBinding, err := p.getPortBinding(container)
+		if err != nil {
+			log.Infof("Unable to find a binding for container %q, falling back on its internal IP/Port.", container.Name)
+		} else if (portBinding.HostIP == "0.0.0.0") || (len(portBinding.HostIP) == 0) {
+			log.Infof("Cannot determine the IP address (got %q) for %q's binding, falling back on its internal IP/Port.", portBinding.HostIP, container.Name)
+		} else {
+			ip = portBinding.HostIP
+			port = portBinding.HostPort
+			usedBound = true
+		}
+	}
+
+	if !usedBound {
+		ip = p.getIPAddress(container)
+		port = getPort(container)
+	}
+
+	if len(ip) == 0 {
+		return "", "", fmt.Errorf("unable to find the IP address for the container %q: the server is ignored", container.Name)
+	}
+
+	return ip, port, nil
+}
+
 func (p *Provider) getServers(containers []dockerData) map[string]types.Server {
 	var servers map[string]types.Server
 
 	for _, container := range containers {
-		ip := p.getIPAddress(container)
-		if len(ip) == 0 {
-			log.Warnf("Unable to find the IP address for the container %q: the server is ignored.", container.Name)
+		ip, port, err := p.getIPPort(container)
+		if err != nil {
+			log.Warn(err)
 			continue
 		}
 
@@ -336,7 +383,6 @@ func (p *Provider) getServers(containers []dockerData) map[string]types.Server {
 		}
 
 		protocol := label.GetStringValue(container.SegmentLabels, label.TraefikProtocol, label.DefaultProtocol)
-		port := getPort(container)
 
 		serverURL := fmt.Sprintf("%s://%s", protocol, net.JoinHostPort(ip, port))
 

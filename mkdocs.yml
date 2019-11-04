@@ -1,11 +1,12 @@
-site_name: Træfik
-site_description: Træfik Documentation
+site_name: Traefik
+site_description: Traefik Documentation
 site_author: containo.us
 site_url: https://docs.traefik.io
 dev_addr: 0.0.0.0:8000
 
 repo_name: 'GitHub'
 repo_url: 'https://github.com/containous/traefik'
+edit_uri: 'edit/v1.7/docs/'
 
 docs_dir: 'docs'
 
@@ -17,18 +18,15 @@ theme:
   favicon: img/traefik.icon.png
   logo: img/traefik.logo.png
   palette:
-    primary: 'blue'
-    accent: 'light blue'
-  feature:
-    tabs: false
-  palette:
     primary: 'cyan'
     accent: 'cyan'
+  feature:
+    tabs: false
   i18n:
     prev: 'Previous'
     next: 'Next'
 
-copyright: "Copyright &copy; 2016-2018 Containous SAS"
+copyright: "Copyright &copy; 2016-2019 Containous"
 
 google_analytics:
   - 'UA-51880359-3'
@@ -43,9 +41,9 @@ google_analytics:
 #    - type: 'stack-overflow'
 #      link: 'https://stackoverflow.com/questions/tagged/traefik'
 #    - type: 'slack'
-#      link: 'https://traefik.herokuapp.com'
+#      link: 'https://slack.traefik.io'
 #    - type: 'twitter'
-#      link: 'https://twitter.com/traefikproxy'
+#      link: 'https://twitter.com/traefik'
 
 extra_css:
   - theme/styles/extra.css

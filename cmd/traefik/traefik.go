@@ -14,6 +14,7 @@ import (
 	"github.com/cenk/backoff"
 	"github.com/containous/flaeg"
 	"github.com/containous/staert"
+	"github.com/containous/traefik/autogen/genstatic"
 	"github.com/containous/traefik/cmd"
 	"github.com/containous/traefik/cmd/bug"
 	"github.com/containous/traefik/cmd/healthcheck"
@@ -21,9 +22,9 @@ import (
 	cmdVersion "github.com/containous/traefik/cmd/version"
 	"github.com/containous/traefik/collector"
 	"github.com/containous/traefik/configuration"
+	"github.com/containous/traefik/configuration/router"
 	"github.com/containous/traefik/job"
 	"github.com/containous/traefik/log"
-	"github.com/containous/traefik/provider/acme"
 	"github.com/containous/traefik/provider/ecs"
 	"github.com/containous/traefik/provider/kubernetes"
 	"github.com/containous/traefik/safe"
@@ -33,6 +34,7 @@ import (
 	"github.com/containous/traefik/types"
 	"github.com/containous/traefik/version"
 	"github.com/coreos/go-systemd/daemon"
+	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"github.com/ogier/pflag"
 	"github.com/sirupsen/logrus"
 	"github.com/vulcand/oxy/roundrobin"
@@ -64,11 +66,12 @@ Complete documentation is available at https://traefik.io`,
 	// add custom parsers
 	f.AddParser(reflect.TypeOf(configuration.EntryPoints{}), &configuration.EntryPoints{})
 	f.AddParser(reflect.TypeOf(configuration.DefaultEntryPoints{}), &configuration.DefaultEntryPoints{})
-	f.AddParser(reflect.TypeOf(traefiktls.RootCAs{}), &traefiktls.RootCAs{})
+	f.AddParser(reflect.TypeOf(traefiktls.FilesOrContents{}), &traefiktls.FilesOrContents{})
 	f.AddParser(reflect.TypeOf(types.Constraints{}), &types.Constraints{})
 	f.AddParser(reflect.TypeOf(kubernetes.Namespaces{}), &kubernetes.Namespaces{})
 	f.AddParser(reflect.TypeOf(ecs.Clusters{}), &ecs.Clusters{})
 	f.AddParser(reflect.TypeOf([]types.Domain{}), &types.Domains{})
+	f.AddParser(reflect.TypeOf(types.DNSResolvers{}), &types.DNSResolvers{})
 	f.AddParser(reflect.TypeOf(types.Buckets{}), &types.Buckets{})
 	f.AddParser(reflect.TypeOf(types.StatusCodes{}), &types.StatusCodes{})
 	f.AddParser(reflect.TypeOf(types.FieldNames{}), &types.FieldNames{})
@@ -163,8 +166,19 @@ func runCmd(globalConfiguration *configuration.GlobalConfiguration, configFile s
 	globalConfiguration.SetEffectiveConfiguration(configFile)
 	globalConfiguration.ValidateConfiguration()
 
-	jsonConf, _ := json.Marshal(globalConfiguration)
 	log.Infof("Traefik version %s built on %s", version.Version, version.BuildDate)
+
+	jsonConf, err := json.Marshal(globalConfiguration)
+	if err != nil {
+		log.Error(err)
+		log.Debugf("Global configuration loaded [struct] %#v", globalConfiguration)
+	} else {
+		log.Debugf("Global configuration loaded %s", string(jsonConf))
+	}
+
+	if globalConfiguration.API != nil && globalConfiguration.API.Dashboard {
+		globalConfiguration.API.DashboardAssets = &assetfs.AssetFS{Asset: genstatic.Asset, AssetInfo: genstatic.AssetInfo, AssetDir: genstatic.AssetDir, Prefix: "static"}
+	}
 
 	if globalConfiguration.CheckNewVersion {
 		checkNewVersion()
@@ -172,17 +186,63 @@ func runCmd(globalConfiguration *configuration.GlobalConfiguration, configFile s
 
 	stats(globalConfiguration)
 
-	log.Debugf("Global configuration loaded %s", string(jsonConf))
-	if acme.IsEnabled() {
-		store := acme.NewLocalStore(acme.Get().Storage)
-		acme.Get().Store = store
+	providerAggregator := configuration.NewProviderAggregator(globalConfiguration)
+
+	acmeprovider, err := globalConfiguration.InitACMEProvider()
+	if err != nil {
+		log.Errorf("Unable to initialize ACME provider: %v", err)
+	} else if acmeprovider != nil {
+		err = providerAggregator.AddProvider(acmeprovider)
+		if err != nil {
+			log.Errorf("Unable to add ACME provider to the providers list: %v", err)
+			acmeprovider = nil
+		}
 	}
-	svr := server.NewServer(*globalConfiguration, configuration.NewProviderAggregator(globalConfiguration))
-	if acme.IsEnabled() && acme.Get().OnHostRule {
-		acme.Get().SetConfigListenerChan(make(chan types.Configuration))
-		svr.AddListener(acme.Get().ListenConfiguration)
+
+	entryPoints := map[string]server.EntryPoint{}
+	for entryPointName, config := range globalConfiguration.EntryPoints {
+
+		entryPoint := server.EntryPoint{
+			Configuration: config,
+		}
+
+		internalRouter := router.NewInternalRouterAggregator(*globalConfiguration, entryPointName)
+		if acmeprovider != nil {
+			if acmeprovider.HTTPChallenge != nil && entryPointName == acmeprovider.HTTPChallenge.EntryPoint {
+				internalRouter.AddRouter(acmeprovider)
+			}
+
+			// TLS ALPN 01
+			if acmeprovider.TLSChallenge != nil && acmeprovider.HTTPChallenge == nil && acmeprovider.DNSChallenge == nil {
+				entryPoint.TLSALPNGetter = acmeprovider.GetTLSALPNCertificate
+			}
+
+			if acmeprovider.OnDemand && entryPointName == acmeprovider.EntryPoint {
+				entryPoint.OnDemandListener = acmeprovider.ListenRequest
+			}
+
+			if entryPointName == acmeprovider.EntryPoint {
+				entryPoint.CertificateStore = traefiktls.NewCertificateStore()
+				acmeprovider.SetCertificateStore(entryPoint.CertificateStore)
+				log.Debugf("Setting Acme Certificate store from Entrypoint: %s", entryPointName)
+			}
+		}
+
+		entryPoint.InternalRouter = internalRouter
+		entryPoints[entryPointName] = entryPoint
+	}
+
+	svr := server.NewServer(*globalConfiguration, providerAggregator, entryPoints)
+	if acmeprovider != nil && acmeprovider.OnHostRule {
+		acmeprovider.SetConfigListenerChan(make(chan types.Configuration))
+		svr.AddListener(acmeprovider.ListenConfiguration)
 	}
 	ctx := cmd.ContextWithSignal(context.Background())
+
+	if globalConfiguration.Ping != nil {
+		globalConfiguration.Ping.WithContext(ctx)
+	}
+
 	svr.StartWithContext(ctx)
 	defer svr.Close()
 
@@ -292,14 +352,14 @@ func stats(globalConfiguration *configuration.GlobalConfiguration) {
 Stats collection is enabled.
 Many thanks for contributing to Traefik's improvement by allowing us to receive anonymous information from your configuration.
 Help us improve Traefik by leaving this feature on :)
-More details on: https://docs.traefik.io/basics/#collected-data
+More details on: https://docs.traefik.io/v1.7/basics/#collected-data
 `)
 		collect(globalConfiguration)
 	} else {
 		log.Info(`
 Stats collection is disabled.
 Help us improve Traefik by turning this feature on :)
-More details on: https://docs.traefik.io/basics/#collected-data
+More details on: https://docs.traefik.io/v1.7/basics/#collected-data
 `)
 	}
 }

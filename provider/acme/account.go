@@ -7,14 +7,16 @@ import (
 	"crypto/x509"
 
 	"github.com/containous/traefik/log"
-	"github.com/xenolf/lego/acme"
+	"github.com/go-acme/lego/certcrypto"
+	"github.com/go-acme/lego/registration"
 )
 
 // Account is used to store lets encrypt registration info
 type Account struct {
 	Email        string
-	Registration *acme.RegistrationResource
+	Registration *registration.Resource
 	PrivateKey   []byte
+	KeyType      certcrypto.KeyType
 }
 
 const (
@@ -23,7 +25,9 @@ const (
 )
 
 // NewAccount creates an account
-func NewAccount(email string) (*Account, error) {
+func NewAccount(email string, keyTypeValue string) (*Account, error) {
+	keyType := GetKeyType(keyTypeValue)
+
 	// Create a user. New accounts need an email and private key to start
 	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
@@ -33,6 +37,7 @@ func NewAccount(email string) (*Account, error) {
 	return &Account{
 		Email:      email,
 		PrivateKey: x509.MarshalPKCS1PrivateKey(privateKey),
+		KeyType:    keyType,
 	}, nil
 }
 
@@ -42,7 +47,7 @@ func (a *Account) GetEmail() string {
 }
 
 // GetRegistration returns lets encrypt registration resource
-func (a *Account) GetRegistration() *acme.RegistrationResource {
+func (a *Account) GetRegistration() *registration.Resource {
 	return a.Registration
 }
 
@@ -54,4 +59,26 @@ func (a *Account) GetPrivateKey() crypto.PrivateKey {
 
 	log.Errorf("Cannot unmarshal private key %+v", a.PrivateKey)
 	return nil
+}
+
+// GetKeyType used to determine which algo to used
+func GetKeyType(value string) certcrypto.KeyType {
+	switch value {
+	case "EC256":
+		return certcrypto.EC256
+	case "EC384":
+		return certcrypto.EC384
+	case "RSA2048":
+		return certcrypto.RSA2048
+	case "RSA4096":
+		return certcrypto.RSA4096
+	case "RSA8192":
+		return certcrypto.RSA8192
+	case "":
+		log.Infof("The key type is empty. Use default key type %v.", certcrypto.RSA4096)
+		return certcrypto.RSA4096
+	default:
+		log.Infof("Unable to determine key type value %q. Use default key type %v.", value, certcrypto.RSA4096)
+		return certcrypto.RSA4096
+	}
 }

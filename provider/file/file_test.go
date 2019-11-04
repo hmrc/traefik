@@ -12,6 +12,7 @@ import (
 	"github.com/containous/traefik/safe"
 	"github.com/containous/traefik/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // createRandomFile Helper
@@ -198,7 +199,7 @@ func TestProvideWithoutWatch(t *testing.T) {
 			configChan := make(chan types.ConfigMessage)
 
 			go func() {
-				err := provider.Provide(configChan, safe.NewPool(context.Background()), types.Constraints{})
+				err := provider.Provide(configChan, safe.NewPool(context.Background()))
 				assert.NoError(t, err)
 			}()
 
@@ -226,7 +227,7 @@ func TestProvideWithWatch(t *testing.T) {
 			configChan := make(chan types.ConfigMessage)
 
 			go func() {
-				err := provider.Provide(configChan, safe.NewPool(context.Background()), types.Constraints{})
+				err := provider.Provide(configChan, safe.NewPool(context.Background()))
 				assert.NoError(t, err)
 			}()
 
@@ -255,16 +256,21 @@ func TestProvideWithWatch(t *testing.T) {
 			}
 
 			timeout = time.After(time.Second * 1)
-			success := false
-			for !success {
+			var numUpdates, numBackends, numFrontends, numTLSConfs int
+			for {
 				select {
 				case config := <-configChan:
-					success = assert.Len(t, config.Configuration.Backends, test.expectedNumBackend)
-					success = success && assert.Len(t, config.Configuration.Frontends, test.expectedNumFrontend)
-					success = success && assert.Len(t, config.Configuration.TLS, test.expectedNumTLSConf)
+					numUpdates++
+					numBackends = len(config.Configuration.Backends)
+					numFrontends = len(config.Configuration.Frontends)
+					numTLSConfs = len(config.Configuration.TLS)
+					t.Logf("received update #%d: backends %d/%d, frontends %d/%d, TLS configs %d/%d", numUpdates, numBackends, test.expectedNumBackend, numFrontends, test.expectedNumFrontend, numTLSConfs, test.expectedNumTLSConf)
+
+					if numBackends == test.expectedNumBackend && numFrontends == test.expectedNumFrontend && numTLSConfs == test.expectedNumTLSConf {
+						return
+					}
 				case <-timeout:
-					t.Errorf("timeout while waiting for config")
-					return
+					t.Fatal("timeout while waiting for config")
 				}
 			}
 		})
@@ -276,7 +282,7 @@ func TestErrorWhenEmptyConfig(t *testing.T) {
 	configChan := make(chan types.ConfigMessage)
 	errorChan := make(chan struct{})
 	go func() {
-		err := provider.Provide(configChan, safe.NewPool(context.Background()), types.Constraints{})
+		err := provider.Provide(configChan, safe.NewPool(context.Background()))
 		assert.Error(t, err)
 		close(errorChan)
 	}()
@@ -324,6 +330,27 @@ func createProvider(t *testing.T, test ProvideTestCase, watch bool) (*Provider, 
 	}
 
 	return provider, func() {
-		os.Remove(tempDir)
+		os.RemoveAll(tempDir)
 	}
+}
+
+func TestTLSContent(t *testing.T) {
+	tempDir := createTempDir(t, "testdir")
+	defer os.RemoveAll(tempDir)
+
+	fileTLS := createRandomFile(t, tempDir, "CONTENT")
+	fileConfig := createRandomFile(t, tempDir, `
+[[tls]]
+entryPoints = ["https"]
+  [tls.certificate]
+    certFile = "`+fileTLS.Name()+`"
+    keyFile = "`+fileTLS.Name()+`"
+`)
+
+	provider := &Provider{}
+	configuration, err := provider.loadFileConfig(fileConfig.Name(), true)
+	require.NoError(t, err)
+
+	require.Equal(t, "CONTENT", configuration.TLS[0].Certificate.CertFile.String())
+	require.Equal(t, "CONTENT", configuration.TLS[0].Certificate.KeyFile.String())
 }

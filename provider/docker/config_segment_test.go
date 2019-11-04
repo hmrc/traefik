@@ -46,10 +46,289 @@ func TestSegmentBuildConfiguration(t *testing.T) {
 					Backend:        "backend-foo-sauternes",
 					PassHostHeader: true,
 					EntryPoints:    []string{"http", "https"},
-					BasicAuth:      []string{},
 					Routes: map[string]types.Route{
 						"route-frontend-sauternes-foo-sauternes": {
 							Rule: "Host:foo.docker.localhost",
+						},
+					},
+				},
+			},
+			expectedBackends: map[string]*types.Backend{
+				"backend-foo-sauternes": {
+					Servers: map[string]types.Server{
+						"server-foo-863563a2e23c95502862016417ee95ea": {
+							URL:    "http://127.0.0.1:2503",
+							Weight: label.DefaultWeight,
+						},
+					},
+					CircuitBreaker: nil,
+				},
+			},
+		},
+		{
+			desc: "pass tls client cert",
+			containers: []docker.ContainerJSON{
+				containerJSON(
+					name("foo"),
+					labels(map[string]string{
+						"traefik.sauternes.port":                                                                       "2503",
+						"traefik.sauternes.frontend.entryPoints":                                                       "http,https",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertPem:                         "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosNotAfter:               "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosNotBefore:              "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosSans:                   "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosSubjectCommonName:      "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosSubjectCountry:         "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosSubjectDomainComponent: "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosSubjectLocality:        "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosSubjectOrganization:    "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosSubjectProvince:        "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosSubjectSerialNumber:    "true",
+					}),
+					ports(nat.PortMap{
+						"80/tcp": {},
+					}),
+					withNetwork("bridge", ipv4("127.0.0.1")),
+				),
+			},
+			expectedFrontends: map[string]*types.Frontend{
+				"frontend-sauternes-foo-sauternes": {
+					Backend:        "backend-foo-sauternes",
+					PassHostHeader: true,
+					EntryPoints:    []string{"http", "https"},
+					Routes: map[string]types.Route{
+						"route-frontend-sauternes-foo-sauternes": {
+							Rule: "Host:foo.docker.localhost",
+						},
+					},
+					PassTLSClientCert: &types.TLSClientHeaders{
+						PEM: true,
+						Infos: &types.TLSClientCertificateInfos{
+							NotBefore: true,
+							Sans:      true,
+							NotAfter:  true,
+							Subject: &types.TLSCLientCertificateDNInfos{
+								CommonName:      true,
+								Country:         true,
+								DomainComponent: true,
+								Locality:        true,
+								Organization:    true,
+								Province:        true,
+								SerialNumber:    true,
+							},
+						},
+					},
+				},
+			},
+			expectedBackends: map[string]*types.Backend{
+				"backend-foo-sauternes": {
+					Servers: map[string]types.Server{
+						"server-foo-863563a2e23c95502862016417ee95ea": {
+							URL:    "http://127.0.0.1:2503",
+							Weight: label.DefaultWeight,
+						},
+					},
+					CircuitBreaker: nil,
+				},
+			},
+		},
+		{
+			desc: "auth basic",
+			containers: []docker.ContainerJSON{
+				containerJSON(
+					name("foo"),
+					labels(map[string]string{
+						"traefik.sauternes.port":                                                "2503",
+						"traefik.sauternes.frontend.entryPoints":                                "http,https",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthHeaderField:       "X-WebAuth-User",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthBasicUsers:        "test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/,test2:$apr1$d9hr9HBB$4HxwgUir3HP4EsggP/QNo0",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthBasicUsersFile:    ".htpasswd",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthBasicRemoveHeader: "true",
+					}),
+					ports(nat.PortMap{
+						"80/tcp": {},
+					}),
+					withNetwork("bridge", ipv4("127.0.0.1")),
+				),
+			},
+			expectedFrontends: map[string]*types.Frontend{
+				"frontend-sauternes-foo-sauternes": {
+					Backend:        "backend-foo-sauternes",
+					PassHostHeader: true,
+					EntryPoints:    []string{"http", "https"},
+					Routes: map[string]types.Route{
+						"route-frontend-sauternes-foo-sauternes": {
+							Rule: "Host:foo.docker.localhost",
+						},
+					},
+					Auth: &types.Auth{
+						HeaderField: "X-WebAuth-User",
+						Basic: &types.Basic{
+							RemoveHeader: true,
+							Users: []string{"test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/",
+								"test2:$apr1$d9hr9HBB$4HxwgUir3HP4EsggP/QNo0"},
+							UsersFile: ".htpasswd",
+						},
+					},
+				},
+			},
+			expectedBackends: map[string]*types.Backend{
+				"backend-foo-sauternes": {
+					Servers: map[string]types.Server{
+						"server-foo-863563a2e23c95502862016417ee95ea": {
+							URL:    "http://127.0.0.1:2503",
+							Weight: label.DefaultWeight,
+						},
+					},
+					CircuitBreaker: nil,
+				},
+			},
+		},
+		{
+			desc: "auth basic backward compatibility",
+			containers: []docker.ContainerJSON{
+				containerJSON(
+					name("foo"),
+					labels(map[string]string{
+						"traefik.sauternes.port":                                    "2503",
+						"traefik.sauternes.frontend.entryPoints":                    "http,https",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthBasic: "test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/,test2:$apr1$d9hr9HBB$4HxwgUir3HP4EsggP/QNo0",
+					}),
+					ports(nat.PortMap{
+						"80/tcp": {},
+					}),
+					withNetwork("bridge", ipv4("127.0.0.1")),
+				),
+			},
+			expectedFrontends: map[string]*types.Frontend{
+				"frontend-sauternes-foo-sauternes": {
+					Backend:        "backend-foo-sauternes",
+					PassHostHeader: true,
+					EntryPoints:    []string{"http", "https"},
+					Routes: map[string]types.Route{
+						"route-frontend-sauternes-foo-sauternes": {
+							Rule: "Host:foo.docker.localhost",
+						},
+					},
+					Auth: &types.Auth{
+						Basic: &types.Basic{
+							Users: []string{"test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/",
+								"test2:$apr1$d9hr9HBB$4HxwgUir3HP4EsggP/QNo0"},
+						},
+					},
+				},
+			},
+			expectedBackends: map[string]*types.Backend{
+				"backend-foo-sauternes": {
+					Servers: map[string]types.Server{
+						"server-foo-863563a2e23c95502862016417ee95ea": {
+							URL:    "http://127.0.0.1:2503",
+							Weight: label.DefaultWeight,
+						},
+					},
+					CircuitBreaker: nil,
+				},
+			},
+		},
+		{
+			desc: "auth digest",
+			containers: []docker.ContainerJSON{
+				containerJSON(
+					name("foo"),
+					labels(map[string]string{
+						"traefik.sauternes.port":                                                 "2503",
+						"traefik.sauternes.frontend.entryPoints":                                 "http,https",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthHeaderField:        "X-WebAuth-User",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthDigestUsers:        "test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/,test2:$apr1$d9hr9HBB$4HxwgUir3HP4EsggP/QNo0",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthDigestUsersFile:    ".htpasswd",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthDigestRemoveHeader: "true",
+					}),
+					ports(nat.PortMap{
+						"80/tcp": {},
+					}),
+					withNetwork("bridge", ipv4("127.0.0.1")),
+				),
+			},
+			expectedFrontends: map[string]*types.Frontend{
+				"frontend-sauternes-foo-sauternes": {
+					Backend:        "backend-foo-sauternes",
+					PassHostHeader: true,
+					EntryPoints:    []string{"http", "https"},
+					Routes: map[string]types.Route{
+						"route-frontend-sauternes-foo-sauternes": {
+							Rule: "Host:foo.docker.localhost",
+						},
+					},
+					Auth: &types.Auth{
+						HeaderField: "X-WebAuth-User",
+						Digest: &types.Digest{
+							RemoveHeader: true,
+							Users: []string{"test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/",
+								"test2:$apr1$d9hr9HBB$4HxwgUir3HP4EsggP/QNo0"},
+							UsersFile: ".htpasswd",
+						},
+					},
+				},
+			},
+			expectedBackends: map[string]*types.Backend{
+				"backend-foo-sauternes": {
+					Servers: map[string]types.Server{
+						"server-foo-863563a2e23c95502862016417ee95ea": {
+							URL:    "http://127.0.0.1:2503",
+							Weight: label.DefaultWeight,
+						},
+					},
+					CircuitBreaker: nil,
+				},
+			},
+		},
+		{
+			desc: "auth forward",
+			containers: []docker.ContainerJSON{
+				containerJSON(
+					name("foo"),
+					labels(map[string]string{
+						"traefik.sauternes.port":                                                           "2503",
+						"traefik.sauternes.frontend.entryPoints":                                           "http,https",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthHeaderField:                  "X-WebAuth-User",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthForwardAddress:               "auth.server",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthForwardTrustForwardHeader:    "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthForwardTLSCa:                 "ca.crt",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthForwardTLSCaOptional:         "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthForwardTLSCert:               "server.crt",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthForwardTLSKey:                "server.key",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthForwardTLSInsecureSkipVerify: "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthForwardAuthResponseHeaders:   "X-Auth-User,X-Auth-Token",
+					}),
+					ports(nat.PortMap{
+						"80/tcp": {},
+					}),
+					withNetwork("bridge", ipv4("127.0.0.1")),
+				),
+			},
+			expectedFrontends: map[string]*types.Frontend{
+				"frontend-sauternes-foo-sauternes": {
+					Backend:        "backend-foo-sauternes",
+					PassHostHeader: true,
+					EntryPoints:    []string{"http", "https"},
+					Routes: map[string]types.Route{
+						"route-frontend-sauternes-foo-sauternes": {
+							Rule: "Host:foo.docker.localhost",
+						},
+					},
+					Auth: &types.Auth{
+						HeaderField: "X-WebAuth-User",
+						Forward: &types.Forward{
+							Address: "auth.server",
+							TLS: &types.ClientTLS{
+								CA:                 "ca.crt",
+								CAOptional:         true,
+								Cert:               "server.crt",
+								Key:                "server.key",
+								InsecureSkipVerify: true,
+							},
+							TrustForwardHeader:  true,
+							AuthResponseHeaders: []string{"X-Auth-User", "X-Auth-Token"},
 						},
 					},
 				},
@@ -76,6 +355,40 @@ func TestSegmentBuildConfiguration(t *testing.T) {
 						label.Prefix + "sauternes." + label.SuffixProtocol: "https",
 						label.Prefix + "sauternes." + label.SuffixWeight:   "12",
 
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertPem:                         "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosNotAfter:               "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosNotBefore:              "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosSans:                   "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosIssuerCommonName:       "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosIssuerCountry:          "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosIssuerDomainComponent:  "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosIssuerLocality:         "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosIssuerOrganization:     "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosIssuerProvince:         "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosIssuerSerialNumber:     "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosSubjectCommonName:      "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosSubjectCountry:         "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosSubjectDomainComponent: "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosSubjectLocality:        "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosSubjectOrganization:    "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosSubjectProvince:        "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendPassTLSClientCertInfosSubjectSerialNumber:    "true",
+
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthBasicRemoveHeader:            "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthBasicUsers:                   "test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/,test2:$apr1$d9hr9HBB$4HxwgUir3HP4EsggP/QNo0",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthBasicUsersFile:               ".htpasswd",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthDigestRemoveHeader:           "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthDigestUsers:                  "test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/,test2:$apr1$d9hr9HBB$4HxwgUir3HP4EsggP/QNo0",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthDigestUsersFile:              ".htpasswd",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthForwardAddress:               "auth.server",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthForwardTrustForwardHeader:    "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthForwardTLSCa:                 "ca.crt",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthForwardTLSCaOptional:         "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthForwardTLSCert:               "server.crt",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthForwardTLSKey:                "server.key",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthForwardTLSInsecureSkipVerify: "true",
+						label.Prefix + "sauternes." + label.SuffixFrontendAuthHeaderField:                  "X-WebAuth-User",
+
 						label.Prefix + "sauternes." + label.SuffixFrontendAuthBasic:                 "test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/,test2:$apr1$d9hr9HBB$4HxwgUir3HP4EsggP/QNo0",
 						label.Prefix + "sauternes." + label.SuffixFrontendEntryPoints:               "http,https",
 						label.Prefix + "sauternes." + label.SuffixFrontendPassHostHeader:            "true",
@@ -100,6 +413,7 @@ func TestSegmentBuildConfiguration(t *testing.T) {
 						label.Prefix + "sauternes." + label.SuffixFrontendHeadersReferrerPolicy:          "foo",
 						label.Prefix + "sauternes." + label.SuffixFrontendHeadersCustomBrowserXSSValue:   "foo",
 						label.Prefix + "sauternes." + label.SuffixFrontendHeadersSTSSeconds:              "666",
+						label.Prefix + "sauternes." + label.SuffixFrontendHeadersSSLForceHost:            "true",
 						label.Prefix + "sauternes." + label.SuffixFrontendHeadersSSLRedirect:             "true",
 						label.Prefix + "sauternes." + label.SuffixFrontendHeadersSSLTemporaryRedirect:    "true",
 						label.Prefix + "sauternes." + label.SuffixFrontendHeadersSTSIncludeSubdomains:    "true",
@@ -141,9 +455,40 @@ func TestSegmentBuildConfiguration(t *testing.T) {
 					PassHostHeader: true,
 					PassTLSCert:    true,
 					Priority:       666,
-					BasicAuth: []string{
-						"test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/",
-						"test2:$apr1$d9hr9HBB$4HxwgUir3HP4EsggP/QNo0",
+					PassTLSClientCert: &types.TLSClientHeaders{
+						PEM: true,
+						Infos: &types.TLSClientCertificateInfos{
+							NotBefore: true,
+							Sans:      true,
+							NotAfter:  true,
+							Subject: &types.TLSCLientCertificateDNInfos{
+								CommonName:      true,
+								Country:         true,
+								DomainComponent: true,
+								Locality:        true,
+								Organization:    true,
+								Province:        true,
+								SerialNumber:    true,
+							},
+							Issuer: &types.TLSCLientCertificateDNInfos{
+								CommonName:      true,
+								Country:         true,
+								DomainComponent: true,
+								Locality:        true,
+								Organization:    true,
+								Province:        true,
+								SerialNumber:    true,
+							},
+						},
+					},
+					Auth: &types.Auth{
+						HeaderField: "X-WebAuth-User",
+						Basic: &types.Basic{
+							RemoveHeader: true,
+							Users: []string{"test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/",
+								"test2:$apr1$d9hr9HBB$4HxwgUir3HP4EsggP/QNo0"},
+							UsersFile: ".htpasswd",
+						},
 					},
 					WhiteList: &types.WhiteList{
 						SourceRange:      []string{"10.10.10.10"},
@@ -170,6 +515,7 @@ func TestSegmentBuildConfiguration(t *testing.T) {
 						},
 						SSLRedirect:          true,
 						SSLTemporaryRedirect: true,
+						SSLForceHost:         true,
 						SSLHost:              "foo",
 						SSLProxyHeaders: map[string]string{
 							"Access-Control-Allow-Methods": "POST,GET,OPTIONS",
@@ -283,7 +629,12 @@ func TestSegmentBuildConfiguration(t *testing.T) {
 					PassHostHeader: false,
 					Priority:       5000,
 					EntryPoints:    []string{"http", "https", "ws"},
-					BasicAuth:      []string{"test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/", "test2:$apr1$d9hr9HBB$4HxwgUir3HP4EsggP/QNo0"},
+					Auth: &types.Auth{
+						Basic: &types.Basic{
+							Users: []string{"test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/",
+								"test2:$apr1$d9hr9HBB$4HxwgUir3HP4EsggP/QNo0"},
+						},
+					},
 					Redirect: &types.Redirect{
 						EntryPoint: "https",
 					},
@@ -297,7 +648,6 @@ func TestSegmentBuildConfiguration(t *testing.T) {
 					Backend:        "backend-test2-anothersauternes",
 					PassHostHeader: true,
 					EntryPoints:    []string{},
-					BasicAuth:      []string{},
 					Routes: map[string]types.Route{
 						"route-frontend-anothersauternes-test2-anothersauternes": {
 							Rule: "Path:/anotherpath",
@@ -358,7 +708,6 @@ func TestSegmentBuildConfiguration(t *testing.T) {
 					PassHostHeader: true,
 					Priority:       5000,
 					EntryPoints:    []string{"http", "https"},
-					BasicAuth:      []string{},
 					Redirect: &types.Redirect{
 						EntryPoint: "https",
 					},
@@ -373,7 +722,6 @@ func TestSegmentBuildConfiguration(t *testing.T) {
 					PassHostHeader: true,
 					Priority:       3000,
 					EntryPoints:    []string{"http", "https"},
-					BasicAuth:      []string{},
 					Redirect: &types.Redirect{
 						EntryPoint: "https",
 					},
@@ -430,7 +778,6 @@ func TestSegmentBuildConfiguration(t *testing.T) {
 					PassHostHeader: true,
 					Priority:       5000,
 					EntryPoints:    []string{"http", "https"},
-					BasicAuth:      []string{},
 					Redirect: &types.Redirect{
 						EntryPoint: "https",
 					},
@@ -445,7 +792,6 @@ func TestSegmentBuildConfiguration(t *testing.T) {
 					PassHostHeader: true,
 					Priority:       3000,
 					EntryPoints:    []string{"http", "https"},
-					BasicAuth:      []string{},
 					Redirect: &types.Redirect{
 						EntryPoint: "https",
 					},

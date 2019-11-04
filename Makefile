@@ -1,4 +1,4 @@
-.PHONY: all
+.PHONY: all docs-verify docs docs-clean docs-build
 
 TRAEFIK_ENVS := \
 	-e OS_ARCH_ARG \
@@ -22,6 +22,8 @@ REPONAME := $(shell echo $(REPO) | tr '[:upper:]' '[:lower:]')
 TRAEFIK_IMAGE := $(if $(REPONAME),$(REPONAME),"containous/traefik")
 INTEGRATION_OPTS := $(if $(MAKE_DOCKER_HOST),-e "DOCKER_HOST=$(MAKE_DOCKER_HOST)", -e "TEST_CONTAINER=1" -v "/var/run/docker.sock:/var/run/docker.sock")
 TRAEFIK_DOC_IMAGE := traefik-docs
+TRAEFIK_DOC_VERIFY_IMAGE := $(TRAEFIK_DOC_IMAGE)-verify
+DOCS_VERIFY_SKIP ?= false
 
 DOCKER_BUILD_ARGS := $(if $(DOCKER_VERSION), "--build-arg=DOCKER_VERSION=$(DOCKER_VERSION)",)
 DOCKER_RUN_OPTS := $(TRAEFIK_ENVS) $(TRAEFIK_MOUNT) "$(TRAEFIK_DEV_IMAGE)"
@@ -74,7 +76,7 @@ test-integration: build ## run the integration tests
 	TEST_HOST=1 ./script/make.sh test-integration
 
 validate: build  ## validate code, vendor and autogen
-	$(DOCKER_RUN_TRAEFIK) ./script/make.sh validate-gofmt validate-govet validate-golint validate-misspell validate-vendor validate-autogen
+	$(DOCKER_RUN_TRAEFIK) ./script/make.sh validate-gofmt validate-golint validate-misspell validate-vendor validate-autogen
 
 build: dist
 	docker build $(DOCKER_BUILD_ARGS) -t "$(TRAEFIK_DEV_IMAGE)" -f build.Dockerfile .
@@ -94,11 +96,27 @@ image-dirty: binary ## build a docker traefik image
 image: clear-static binary ## clean up static directory and build a docker traefik image
 	docker build -t $(TRAEFIK_IMAGE) .
 
+docs-image:
+	docker build -t $(TRAEFIK_DOC_IMAGE) -f docs.Dockerfile .
+
 docs: docs-image
 	docker run  $(DOCKER_RUN_DOC_OPTS) $(TRAEFIK_DOC_IMAGE) mkdocs serve
 
-docs-image:
-	docker build -t $(TRAEFIK_DOC_IMAGE) -f docs.Dockerfile .
+docs-build: site
+
+docs-verify: site
+ifeq ($(DOCS_VERIFY_SKIP),false)
+	docker build -t $(TRAEFIK_DOC_VERIFY_IMAGE) ./script/docs-verify-docker-image
+	docker run --rm -v $(CURDIR):/app $(TRAEFIK_DOC_VERIFY_IMAGE)
+else
+	@echo "DOCS_LINT_SKIP is true: no linting done."
+endif
+
+site: docs-image
+	docker run  $(DOCKER_RUN_DOC_OPTS) $(TRAEFIK_DOC_IMAGE) mkdocs build
+
+docs-clean:
+	rm -rf $(CURDIR)/site
 
 clear-static:
 	rm -rf static

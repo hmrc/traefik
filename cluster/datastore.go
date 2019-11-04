@@ -13,7 +13,7 @@ import (
 	"github.com/containous/traefik/job"
 	"github.com/containous/traefik/log"
 	"github.com/containous/traefik/safe"
-	"github.com/satori/go.uuid"
+	"github.com/google/uuid"
 )
 
 // Metadata stores Object plus metadata
@@ -78,7 +78,7 @@ func (d *Datastore) watchChanges() error {
 	stopCh := make(chan struct{})
 	kvCh, err := d.kv.Watch(d.lockKey, stopCh, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("error while watching key %s: %v", d.lockKey, err)
 	}
 	safe.Go(func() {
 		ctx, cancel := context.WithCancel(d.ctx)
@@ -125,7 +125,7 @@ func (d *Datastore) reload() error {
 
 // Begin creates a transaction with the KV store.
 func (d *Datastore) Begin() (Transaction, Object, error) {
-	id := uuid.NewV4().String()
+	id := uuid.New().String()
 	log.Debugf("Transaction %s begins", id)
 	remoteLock, err := d.kv.NewLock(d.lockKey, &store.LockOptions{TTL: 20 * time.Second, Value: []byte(id)})
 	if err != nil {
@@ -152,7 +152,7 @@ func (d *Datastore) Begin() (Transaction, Object, error) {
 	operation := func() error {
 		meta := d.get()
 		if meta.Lock != id {
-			return fmt.Errorf("Object lock value: expected %s, got %s", id, meta.Lock)
+			return fmt.Errorf("object lock value: expected %s, got %s", id, meta.Lock)
 		}
 		return nil
 	}
@@ -167,7 +167,7 @@ func (d *Datastore) Begin() (Transaction, Object, error) {
 	ebo.MaxElapsedTime = 60 * time.Second
 	err = backoff.RetryNotify(safe.OperationWithRecover(operation), ebo, notify)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Datastore cannot sync: %v", err)
+		return nil, nil, fmt.Errorf("datastore cannot sync: %v", err)
 	}
 
 	// we synced with KV store, we can now return Setter
@@ -224,12 +224,12 @@ func (s *datastoreTransaction) Commit(object Object) error {
 	s.localLock.Lock()
 	defer s.localLock.Unlock()
 	if s.dirty {
-		return fmt.Errorf("Transaction already used, please begin a new one")
+		return fmt.Errorf("transaction already used, please begin a new one")
 	}
 	s.Datastore.meta.object = object
 	err := s.Datastore.meta.Marshall()
 	if err != nil {
-		return fmt.Errorf("Marshall error: %s", err)
+		return fmt.Errorf("marshall error: %s", err)
 	}
 	err = s.kv.StoreConfig(s.Datastore.meta)
 	if err != nil {
@@ -238,7 +238,7 @@ func (s *datastoreTransaction) Commit(object Object) error {
 
 	err = s.remoteLock.Unlock()
 	if err != nil {
-		return fmt.Errorf("Unlock error: %s", err)
+		return fmt.Errorf("unlock error: %s", err)
 	}
 
 	s.dirty = true

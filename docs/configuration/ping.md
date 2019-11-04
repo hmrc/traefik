@@ -15,7 +15,7 @@
 
 | Path    | Method        | Description                                                                                        |
 |---------|---------------|----------------------------------------------------------------------------------------------------|
-| `/ping` | `GET`, `HEAD` | A simple endpoint to check for Træfik process liveness. Return a code `200` with the content: `OK` |
+| `/ping` | `GET`, `HEAD` | A simple endpoint to check for Traefik process liveness. Return a code `200` with the content: `OK` |
 
 
 !!! warning
@@ -30,7 +30,7 @@ Thus, if you have a regular path for `/foo` and an entrypoint on `:80`, you woul
 * Admin panel: `http://hostname:8080/`
 * Ping URL: `http://hostname:8080/ping`
 
-However, for security reasons, you may want to be able to expose the `/ping` health-check URL to outside health-checkers, e.g. an Internet service or cloud load-balancer, _without_ exposing your administration panel's port.
+However, for security reasons, you may want to be able to expose the `/ping` health-check URL to outside health-checkers, e.g. an Internet service or cloud load-balancer, _without_ exposing your dashboard's port.
 In many environments, the security staff may not _allow_ you to expose it.
 
 You have two options:
@@ -40,7 +40,7 @@ You have two options:
 
 ### Ping health check on a regular entry point
 
-To proxy `/ping` from a regular entry point to the administration one without exposing the panel, do the following:
+To proxy `/ping` from a regular entry point to the administration one without exposing the dashboard, do the following:
 
 ```toml
 defaultEntryPoints = ["http"]
