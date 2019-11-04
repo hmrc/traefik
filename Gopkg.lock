@@ -180,11 +180,12 @@
   revision = "5bd2802263f21d8788851d5305584c82a5c75d7e"
 
 [[projects]]
-  digest = "1:e3fc14e683e391975da7c151bd49b968977a6d83244dda5d0a5d0f171a1c23fd"
+  digest = "1:784d628dc2b1754fc1b6e43643a50e0049d7d324e9c03caf838e05f5d25ca490"
   name = "github.com/Shopify/sarama"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "70f6a705d4a17af059acbc6946fb2bd30762acd7"
+  revision = "675b0b1ff204c259877004140a540d6adf38db17"
+  version = "v1.24.1"
 
 [[projects]]
   digest = "1:bad93311d7294e3916fd50a744e5185afcbe64716dde7734353ed0ccf96b6f14"
@@ -269,8 +270,10 @@
   revision = "48572f11356f1843b694f21a290d4f1006bc5e47"
 
 [[projects]]
+  digest = "1:59707dc65748437f08637bf4646627e550296e4d131871c198c0e52691fe98e7"
   name = "github.com/assembla/cony"
   packages = ["."]
+  pruneopts = "NUT"
   revision = "dd62697b0adb9adfda8589520cb85f4cbc2361f1"
   version = "v0.3.2"
 
@@ -326,14 +329,18 @@
   version = "v1.21.9"
 
 [[projects]]
+  digest = "1:d9e6642c559a1c2a77be2b91880ff672094665a5c0a5e7ee0ccaadd8e9913134"
   name = "github.com/beeker1121/goque"
   packages = ["."]
+  pruneopts = "NUT"
   revision = "e1e63ca63c14b41209e160f54c8e7669564eacc4"
   version = "v2.0.1"
 
 [[projects]]
+  digest = "1:f4298c81d8a94ab68d9e387eaf6e653387df5da17702f06c6d8718a7a8e549d0"
   name = "github.com/beevik/etree"
   packages = ["."]
+  pruneopts = "NUT"
   revision = "9d7e8feddccb4ed1b8afb54e368bd323d2ff652c"
   version = "v1.0.1"
 
@@ -1163,6 +1170,14 @@
   revision = "6bb64b370b90e7ef1fa532be9e591a81c3493e00"
 
 [[projects]]
+  digest = "1:6876abc0847343a3e222ebd074431ff7102ce215087c797be0562e9e21e24db4"
+  name = "github.com/hashicorp/go-uuid"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "4f571afc59f3043a65f8fe6bf46d887b10a01d43"
+  version = "v1.0.1"
+
+[[projects]]
   digest = "1:f7b3db9cb74d13f6a7cf84b3801e68585745eacaf7d40cc10ecc4734c30503d3"
   name = "github.com/hashicorp/go-version"
   packages = ["."]
@@ -1227,6 +1242,17 @@
   version = "v1.3.7"
 
 [[projects]]
+  digest = "1:efc693dbcbe885796a3d46bd1817646d713996bcc2893d42f5434141afc1a86f"
+  name = "github.com/jcmturner/gofork"
+  packages = [
+    "encoding/asn1",
+    "x/crypto/pbkdf2",
+  ]
+  pruneopts = "NUT"
+  revision = "dc7c13fece037a4a36e2b3c69db4991498d30692"
+  version = "v1.0.0"
+
+[[projects]]
   branch = "master"
   digest = "1:a25742a258a504af695b05c2e0cb64274a4e64f4dc0b9e07245e485bad2a49f9"
   name = "github.com/jjcollinge/logrus-appinsights"
@@ -1272,6 +1298,20 @@
   version = "1.0.1"
 
 [[projects]]
+  digest = "1:301017ecffee9e532b46ee6f645215a6b4d3744142070890c76929d4b6fadc7f"
+  name = "github.com/klauspost/compress"
+  packages = [
+    "fse",
+    "huff0",
+    "snappy",
+    "zstd",
+    "zstd/internal/xxhash",
+  ]
+  pruneopts = "NUT"
+  revision = "16a4d3d7137cdefd94d420f22b5c20260674b95c"
+  version = "v1.9.1"
+
+[[projects]]
   branch = "master"
   digest = "1:ec142582cd3bb5cc29a2bc7181a6e67367b90b19f6a957ce506dcd7d1500bf95"
   name = "github.com/kolo/xmlrpc"
@@ -1307,12 +1347,12 @@
   version = "v1.0.0"
 
 [[projects]]
-  branch = "master"
   digest = "1:ad2a63b2d6dfe7d66bf14c01f1171a3951abef6e0fb136170359c3f7c4f51615"
   name = "github.com/labbsr0x/goh"
   packages = ["gohclient"]
   pruneopts = "NUT"
-  revision = "94bcf1cb07b70b26b72ad54b2b050bcd0a66a9c8"
+  revision = "b1072e96a179ebd4e11c1a64123a43213099be81"
+  version = "v1.0.1"
 
 [[projects]]
   branch = "master"
@@ -1789,6 +1829,14 @@
   revision = "1d7be4effb13d2d908342d349d71a284a7542693"
 
 [[projects]]
+  digest = "1:6bc0652ea6e39e22ccd522458b8bdd8665bf23bdc5a20eec90056e4dc7e273ca"
+  name = "github.com/satori/go.uuid"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
+  version = "v1.2.0"
+
+[[projects]]
   digest = "1:9ca27be3cfd8a452f9814926a5842c6917289da8c21174ee0f9c79d84850b2ed"
   name = "github.com/shopspring/decimal"
   packages = ["."]
@@ -1812,8 +1860,10 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:d8ebd7ca7cfc33bbf8a5c9588d8ae1d47d590d4f82a199efa0e81eb72aa7fbee"
   name = "github.com/streadway/amqp"
   packages = ["."]
+  pruneopts = "NUT"
   revision = "e5adc2ada8b8efff032bf61173a233d143e9318e"
 
 [[projects]]
@@ -1846,6 +1896,7 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:b18d044774f6ba5930c3fbf9958b2a9256c21f31dc50ecfa0622fe2a46608974"
   name = "github.com/syndtr/goleveldb"
   packages = [
     "leveldb",
@@ -1859,8 +1910,9 @@
     "leveldb/opt",
     "leveldb/storage",
     "leveldb/table",
-    "leveldb/util"
+    "leveldb/util",
   ]
+  pruneopts = "NUT"
   revision = "5d6fca44a948d2be89a9702de7717f0168403d3d"
 
 [[projects]]
@@ -2076,13 +2128,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:30c1930f8c9fee79f3af60c8b7cd92edd12a4f22187f5527d53509b1a794f555"
+  digest = "1:622b4fd176156842dfd62a90c41b240342257c4d4c19057021737af65f2e48dd"
   name = "golang.org/x/crypto"
   packages = [
     "bcrypt",
     "blowfish",
     "ed25519",
     "ed25519/internal/edwards25519",
+    "md4",
     "ocsp",
     "pbkdf2",
     "pkcs12",
@@ -2305,6 +2358,72 @@
   pruneopts = "NUT"
   revision = "5b3e00af70a9484542169a976dcab8d03e601a17"
   version = "v1.30.0"
+
+[[projects]]
+  digest = "1:fea88a1a5c4cf1101d2e0f9d985ad996a1e1dfd4f3df948e12fcf7cf2baf23dc"
+  name = "gopkg.in/jcmturner/aescts.v1"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "f6abebb3171c4c1b1fea279cb7c7325020a26290"
+  version = "v1.0.1"
+
+[[projects]]
+  digest = "1:807e17e89614e6af666dc08855a88e5f1e3c54afb73c10d4b9d28f3b8f48c63c"
+  name = "gopkg.in/jcmturner/dnsutils.v1"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "13eeb8d49ffb74d7a75784c35e4d900607a3943c"
+  version = "v1.0.1"
+
+[[projects]]
+  digest = "1:96e5a917d6c392c5895bf4530aaf820ea9275aa10275e8e344d31ca828969ead"
+  name = "gopkg.in/jcmturner/gokrb5.v7"
+  packages = [
+    "asn1tools",
+    "client",
+    "config",
+    "credentials",
+    "crypto",
+    "crypto/common",
+    "crypto/etype",
+    "crypto/rfc3961",
+    "crypto/rfc3962",
+    "crypto/rfc4757",
+    "crypto/rfc8009",
+    "gssapi",
+    "iana",
+    "iana/addrtype",
+    "iana/adtype",
+    "iana/asnAppTag",
+    "iana/chksumtype",
+    "iana/errorcode",
+    "iana/etypeID",
+    "iana/flags",
+    "iana/keyusage",
+    "iana/msgtype",
+    "iana/nametype",
+    "iana/patype",
+    "kadmin",
+    "keytab",
+    "krberror",
+    "messages",
+    "pac",
+    "types",
+  ]
+  pruneopts = "NUT"
+  revision = "363118e62befa8a14ff01031c025026077fe5d6d"
+  version = "v7.3.0"
+
+[[projects]]
+  digest = "1:0f16d9c577198e3b8d3209f5a89aabe679525b2aba2a7548714e973035c0e232"
+  name = "gopkg.in/jcmturner/rpc.v1"
+  packages = [
+    "mstypes",
+    "ndr",
+  ]
+  pruneopts = "NUT"
+  revision = "99a8ce2fbf8b8087b6ed12a37c61b10f04070043"
+  version = "v1.1.0"
 
 [[projects]]
   branch = "v2"
@@ -2566,6 +2685,7 @@
     "github.com/BurntSushi/ty/fun",
     "github.com/Masterminds/sprig",
     "github.com/NYTimes/gziphandler",
+    "github.com/Shopify/sarama",
     "github.com/abbot/go-http-auth",
     "github.com/abronan/valkeyrie",
     "github.com/abronan/valkeyrie/store",
@@ -2575,6 +2695,7 @@
     "github.com/abronan/valkeyrie/store/etcd/v3",
     "github.com/abronan/valkeyrie/store/zookeeper",
     "github.com/armon/go-proxyproto",
+    "github.com/assembla/cony",
     "github.com/aws/aws-sdk-go/aws",
     "github.com/aws/aws-sdk-go/aws/credentials",
     "github.com/aws/aws-sdk-go/aws/defaults",
@@ -2585,6 +2706,8 @@
     "github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface",
     "github.com/aws/aws-sdk-go/service/ec2",
     "github.com/aws/aws-sdk-go/service/ecs",
+    "github.com/beeker1121/goque",
+    "github.com/beevik/etree",
     "github.com/cenk/backoff",
     "github.com/containous/flaeg",
     "github.com/containous/flaeg/parse",
@@ -2662,8 +2785,10 @@
     "github.com/rancher/go-rancher-metadata/metadata",
     "github.com/rancher/go-rancher/v2",
     "github.com/ryanuber/go-glob",
+    "github.com/satori/go.uuid",
     "github.com/shopspring/decimal",
     "github.com/sirupsen/logrus",
+    "github.com/streadway/amqp",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/mock",
     "github.com/stretchr/testify/require",
