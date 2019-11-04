@@ -110,6 +110,12 @@ leakDetectionExemptions:
       - '/middlewares/audittap/audittypes/auditing_test.go'
 
 
+  - ruleId: 'filename_private_key_5'
+    filePaths:
+      - '/integration/fixtures/tlsclientheaders/root.pem'
+      - '/integration/fixtures/tlsclientheaders/server.pem'
+      - '/integration/fixtures/acme/ssl/pebble.minica.pem'
+
   - ruleId: 'cert_1'
     filePaths:
       # from upstream
@@ -126,8 +132,14 @@ leakDetectionExemptions:
       - '/integration/fixtures/https/clientca/client1.key'
       - '/integration/fixtures/https/clientca/ca2.key'
       - '/integration/fixtures/https/snitest.com.key'
+      - '/integration/fixtures/tlsclientheaders/server.key'
+      - '/integration/fixtures/https/wildcard.snitest.com.key'
+      - '/integration/fixtures/https/wildcard.www.snitest.com.key'
+      - '/integration/fixtures/https/www.snitest.com.key'
+      - '/integration/fixtures/https/uppercase_wildcard.www.snitest.com.key'
       - '/contrib/scripts/dumpcerts.sh'
       - '/server/server_test.go'
+      - '/server/server_configuration_test.go'
       - '/middlewares/tracing/zipkin/zipkin.go'
       - '/provider/kubernetes/kubernetes_test.go'
       - '/docs/user-guide/kv-config.md'
