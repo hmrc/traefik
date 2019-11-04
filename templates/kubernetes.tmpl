@@ -8,6 +8,11 @@
       expression = "{{ $backend.CircuitBreaker.Expression }}"
     {{end}}
 
+    {{if $backend.ResponseForwarding }}
+    [backends."{{ $backendName }}".responseForwarding]
+      flushInterval = "{{ $backend.ResponseForwarding.FlushInterval }}"
+    {{end}}
+
     [backends."{{ $backendName }}".loadBalancer]
       method = "{{ $backend.LoadBalancer.Method }}"
       sticky = {{ $backend.LoadBalancer.Sticky }}
@@ -52,9 +57,44 @@
       "{{.}}",
       {{end}}]
 
-    basicAuth = [{{range $frontend.BasicAuth }}
-      "{{.}}",
-      {{end}}]
+    {{if $frontend.Auth }}
+    [frontends."{{ $frontendName }}".auth]
+      {{if $frontend.Auth.HeaderField }}
+      headerField = "{{ $frontend.Auth.HeaderField }}"
+      {{end}}
+
+      {{if $frontend.Auth.Basic }}
+      [frontends."{{ $frontendName }}".auth.basic]
+        removeHeader = {{$frontend.Auth.Basic.RemoveHeader}}
+        users = [{{range $frontend.Auth.Basic.Users }}
+          "{{.}}",
+          {{end}}]
+      {{end}}
+
+      {{if $frontend.Auth.Digest }}
+      [frontends."{{ $frontendName }}".auth.digest]
+        removeHeader = {{$frontend.Auth.Digest.RemoveHeader}}
+        users = [{{range $frontend.Auth.Digest.Users }}
+          "{{.}}",
+          {{end}}]
+      {{end}}
+
+      {{if $frontend.Auth.Forward }}
+        [frontends."{{ $frontendName }}".auth.forward]
+          address = "{{ $frontend.Auth.Forward.Address }}"
+          authResponseHeaders = [{{range $frontend.Auth.Forward.AuthResponseHeaders }}
+            "{{.}}",
+            {{end}}]
+          trustForwardHeader = {{ $frontend.Auth.Forward.TrustForwardHeader }}
+          {{if $frontend.Auth.Forward.TLS }}
+          [frontends."{{ $frontendName }}".auth.forward.tls]
+            cert = """{{ $frontend.Auth.Forward.TLS.Cert }}"""
+            key = """{{ $frontend.Auth.Forward.TLS.Key }}"""
+            insecureSkipVerify = {{ $frontend.Auth.Forward.TLS.InsecureSkipVerify }}
+          {{end}}
+      {{end}}
+
+    {{end}}
 
     {{if $frontend.WhiteList }}
     [frontends."{{ $frontendName }}".whiteList]
@@ -96,11 +136,46 @@
         {{end}}
     {{end}}
 
+    {{if $frontend.PassTLSClientCert }}
+    [frontends."{{ $frontendName }}".passTLSClientCert]
+      pem = {{ $frontend.PassTLSClientCert.PEM }}
+      {{ $infos := $frontend.PassTLSClientCert.Infos }}
+      {{if $infos }}
+      [frontends."{{ $frontendName }}".passTLSClientCert.infos]
+        notAfter = {{ $infos.NotAfter   }}
+        notBefore = {{ $infos.NotBefore }}
+        sans = {{ $infos.Sans }}
+        {{ $subject := $infos.Subject }}
+        {{if $subject }}
+        [frontends."{{ $frontendName }}".passTLSClientCert.infos.subject]
+          country = {{ $subject.Country }}
+          province = {{ $subject.Province }}
+          locality = {{ $subject.Locality }}
+          organization = {{ $subject.Organization }}
+          commonName = {{ $subject.CommonName }}
+          serialNumber = {{ $subject.SerialNumber }}
+          domainComponent = {{ $subject.DomainComponent }}
+        {{end}}
+        {{ $issuer := $infos.Subject }}
+        {{if $issuer }}
+        [frontends."{{ $frontendName }}".passTLSClientCert.infos.issuer]
+          country = {{ $issuer.Country }}
+          province = {{ $issuer.Province }}
+          locality = {{ $issuer.Locality }}
+          organization = {{ $issuer.Organization }}
+          commonName = {{ $issuer.CommonName }}
+          serialNumber = {{ $issuer.SerialNumber }}
+          domainComponent = {{ $issuer.DomainComponent }}
+        {{end}}
+      {{end}}
+    {{end}}
+
   {{if $frontend.Headers }}
   [frontends."{{ $frontendName }}".headers]
     SSLRedirect = {{ $frontend.Headers.SSLRedirect }}
     SSLTemporaryRedirect = {{ $frontend.Headers.SSLTemporaryRedirect }}
     SSLHost = "{{ $frontend.Headers.SSLHost }}"
+    SSLForceHost = {{ $frontend.Headers.SSLForceHost }}
     STSSeconds = {{ $frontend.Headers.STSSeconds }}
     STSIncludeSubdomains = {{ $frontend.Headers.STSIncludeSubdomains }}
     STSPreload = {{ $frontend.Headers.STSPreload }}

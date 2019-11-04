@@ -9,13 +9,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"sort"
 	"strings"
 	"time"
 	"unicode"
 
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
-	"github.com/tuvistavie/securerandom"
 )
 
 const defaultSection = "DEFAULT"
@@ -30,6 +31,26 @@ func AddRequestHeader(config Config, req *http.Request) *http.Request {
 
 	if req.Header.Get("Content-Type") == "" {
 		req.Header.Set("Content-Type", "application/json")
+	}
+
+	_, AkamaiCliEnvOK := os.LookupEnv("AKAMAI_CLI")
+	AkamaiCliVersionEnv, AkamaiCliVersionEnvOK := os.LookupEnv("AKAMAI_CLI_VERSION")
+	AkamaiCliCommandEnv, AkamaiCliCommandEnvOK := os.LookupEnv("AKAMAI_CLI_COMMAND")
+	AkamaiCliCommandVersionEnv, AkamaiCliCommandVersionEnvOK := os.LookupEnv("AKAMAI_CLI_COMMAND_VERSION")
+
+	if AkamaiCliEnvOK && AkamaiCliVersionEnvOK {
+		if req.Header.Get("User-Agent") != "" {
+			req.Header.Set("User-Agent", req.Header.Get("User-Agent")+" AkamaiCLI/"+AkamaiCliVersionEnv)
+		} else {
+			req.Header.Set("User-Agent", "AkamaiCLI/"+AkamaiCliVersionEnv)
+		}
+	}
+	if AkamaiCliCommandEnvOK && AkamaiCliCommandVersionEnvOK {
+		if req.Header.Get("User-Agent") != "" {
+			req.Header.Set("User-Agent", req.Header.Get("User-Agent")+" AkamaiCLI-"+AkamaiCliCommandEnv+"/"+AkamaiCliCommandVersionEnv)
+		} else {
+			req.Header.Set("User-Agent", "AkamaiCLI-"+AkamaiCliCommandEnv+"/"+AkamaiCliCommandVersionEnv)
+		}
 	}
 
 	req.Header.Set("Authorization", createAuthHeader(config, req, timestamp, nonce))
@@ -49,12 +70,12 @@ func makeEdgeTimeStamp() string {
 // It is a random string used to detect replayed request messages.
 // A GUID is recommended.
 func createNonce() string {
-	uuid, err := securerandom.Uuid()
+	uuid, err := uuid.NewRandom()
 	if err != nil {
 		log.Errorf(errorMap[ErrUUIDGenerateFailed], err)
 		return ""
 	}
-	return uuid
+	return uuid.String()
 }
 
 func stringMinifier(in string) (out string) {

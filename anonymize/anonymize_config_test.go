@@ -2,12 +2,15 @@ package anonymize
 
 import (
 	"crypto/tls"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/containous/flaeg"
 	"github.com/containous/traefik/acme"
+	"github.com/containous/traefik/api"
 	"github.com/containous/traefik/configuration"
+	"github.com/containous/traefik/middlewares"
 	"github.com/containous/traefik/provider"
 	acmeprovider "github.com/containous/traefik/provider/acme"
 	"github.com/containous/traefik/provider/boltdb"
@@ -25,8 +28,11 @@ import (
 	"github.com/containous/traefik/provider/mesos"
 	"github.com/containous/traefik/provider/rancher"
 	"github.com/containous/traefik/provider/zk"
+	"github.com/containous/traefik/safe"
 	traefiktls "github.com/containous/traefik/tls"
 	"github.com/containous/traefik/types"
+	assetfs "github.com/elazarl/go-bindata-assetfs"
+	"github.com/thoas/stats"
 )
 
 func TestDo_globalConfiguration(t *testing.T) {
@@ -54,7 +60,7 @@ func TestDo_globalConfiguration(t *testing.T) {
 					{CertFile: "CertFile 2", KeyFile: "KeyFile 2"},
 				},
 				ClientCA: traefiktls.ClientCA{
-					Files:    []string{"foo ClientCAFiles 1", "foo ClientCAFiles 2", "foo ClientCAFiles 3"},
+					Files:    traefiktls.FilesOrContents{"foo ClientCAFiles 1", "foo ClientCAFiles 2", "foo ClientCAFiles 3"},
 					Optional: false,
 				},
 			},
@@ -99,7 +105,7 @@ func TestDo_globalConfiguration(t *testing.T) {
 					{CertFile: "CertFile 2", KeyFile: "KeyFile 2"},
 				},
 				ClientCA: traefiktls.ClientCA{
-					Files:    []string{"fii ClientCAFiles 1", "fii ClientCAFiles 2", "fii ClientCAFiles 3"},
+					Files:    traefiktls.FilesOrContents{"fii ClientCAFiles 1", "fii ClientCAFiles 2", "fii ClientCAFiles 3"},
 					Optional: false,
 				},
 			},
@@ -181,12 +187,41 @@ func TestDo_globalConfiguration(t *testing.T) {
 	config.MaxIdleConnsPerHost = 666
 	config.IdleTimeout = flaeg.Duration(666 * time.Second)
 	config.InsecureSkipVerify = true
-	config.RootCAs = traefiktls.RootCAs{"RootCAs 1", "RootCAs 2", "RootCAs 3"}
+	config.RootCAs = traefiktls.FilesOrContents{"RootCAs 1", "RootCAs 2", "RootCAs 3"}
 	config.Retry = &configuration.Retry{
 		Attempts: 666,
 	}
 	config.HealthCheck = &configuration.HealthCheckConfig{
 		Interval: flaeg.Duration(666 * time.Second),
+	}
+	config.API = &api.Handler{
+		EntryPoint:            "traefik",
+		Dashboard:             true,
+		Debug:                 true,
+		CurrentConfigurations: &safe.Safe{},
+		Statistics: &types.Statistics{
+			RecentErrors: 666,
+		},
+		Stats: &stats.Stats{
+			Uptime:              time.Now(),
+			Pid:                 666,
+			ResponseCounts:      map[string]int{"foo": 1},
+			TotalResponseCounts: map[string]int{"bar": 1},
+			TotalResponseTime:   time.Now(),
+		},
+		StatsRecorder: &middlewares.StatsRecorder{},
+		DashboardAssets: &assetfs.AssetFS{
+			Asset: func(path string) ([]byte, error) {
+				return nil, nil
+			},
+			AssetDir: func(path string) ([]string, error) {
+				return nil, nil
+			},
+			AssetInfo: func(path string) (os.FileInfo, error) {
+				return nil, nil
+			},
+			Prefix: "fii",
+		},
 	}
 	config.RespondingTimeouts = &configuration.RespondingTimeouts{
 		ReadTimeout:  flaeg.Duration(666 * time.Second),
@@ -213,7 +248,7 @@ func TestDo_globalConfiguration(t *testing.T) {
 					MustMatch: true,
 				},
 			},
-			Trace: true,
+			Trace:                     true,
 			DebugLogGeneratedTemplate: true,
 		},
 		Endpoint: "docker Endpoint",
@@ -244,7 +279,7 @@ func TestDo_globalConfiguration(t *testing.T) {
 					MustMatch: true,
 				},
 			},
-			Trace: true,
+			Trace:                     true,
 			DebugLogGeneratedTemplate: true,
 		},
 		Directory: "file Directory",
@@ -309,7 +344,7 @@ func TestDo_globalConfiguration(t *testing.T) {
 					MustMatch: true,
 				},
 			},
-			Trace: true,
+			Trace:                     true,
 			DebugLogGeneratedTemplate: true,
 		},
 		Endpoint:                "",
@@ -349,7 +384,7 @@ func TestDo_globalConfiguration(t *testing.T) {
 					MustMatch: true,
 				},
 			},
-			Trace: true,
+			Trace:                     true,
 			DebugLogGeneratedTemplate: true,
 		},
 		Endpoint:         "ConsulCatalog Endpoint",
@@ -374,7 +409,7 @@ func TestDo_globalConfiguration(t *testing.T) {
 					MustMatch: true,
 				},
 			},
-			Trace: true,
+			Trace:                     true,
 			DebugLogGeneratedTemplate: true,
 		},
 		Endpoint:               "k8s Endpoint",
@@ -400,7 +435,7 @@ func TestDo_globalConfiguration(t *testing.T) {
 					MustMatch: true,
 				},
 			},
-			Trace: true,
+			Trace:                     true,
 			DebugLogGeneratedTemplate: true,
 		},
 		Endpoint:           "mesos Endpoint",
@@ -429,7 +464,7 @@ func TestDo_globalConfiguration(t *testing.T) {
 					MustMatch: true,
 				},
 			},
-			Trace: true,
+			Trace:                     true,
 			DebugLogGeneratedTemplate: true,
 		},
 		Endpoint:       "eureka Endpoint",
@@ -452,7 +487,7 @@ func TestDo_globalConfiguration(t *testing.T) {
 					MustMatch: true,
 				},
 			},
-			Trace: true,
+			Trace:                     true,
 			DebugLogGeneratedTemplate: true,
 		},
 		Domain:               "ecs Domain",
@@ -481,7 +516,7 @@ func TestDo_globalConfiguration(t *testing.T) {
 					MustMatch: true,
 				},
 			},
-			Trace: true,
+			Trace:                     true,
 			DebugLogGeneratedTemplate: true,
 		},
 		APIConfiguration: rancher.APIConfiguration{
@@ -519,7 +554,7 @@ func TestDo_globalConfiguration(t *testing.T) {
 					MustMatch: true,
 				},
 			},
-			Trace: true,
+			Trace:                     true,
 			DebugLogGeneratedTemplate: true,
 		},
 		AccessKeyID:     "dynamodb AccessKeyID",
@@ -546,7 +581,7 @@ func TestDo_globalConfiguration(t *testing.T) {
 						MustMatch: true,
 					},
 				},
-				Trace: true,
+				Trace:                     true,
 				DebugLogGeneratedTemplate: true,
 			},
 			Endpoint: "etcd Endpoint",
@@ -578,7 +613,7 @@ func TestDo_globalConfiguration(t *testing.T) {
 						MustMatch: true,
 					},
 				},
-				Trace: true,
+				Trace:                     true,
 				DebugLogGeneratedTemplate: true,
 			},
 			Endpoint: "zk Endpoint",
@@ -610,7 +645,7 @@ func TestDo_globalConfiguration(t *testing.T) {
 						MustMatch: true,
 					},
 				},
-				Trace: true,
+				Trace:                     true,
 				DebugLogGeneratedTemplate: true,
 			},
 			Endpoint: "boltdb Endpoint",
@@ -642,7 +677,7 @@ func TestDo_globalConfiguration(t *testing.T) {
 						MustMatch: true,
 					},
 				},
-				Trace: true,
+				Trace:                     true,
 				DebugLogGeneratedTemplate: true,
 			},
 			Endpoint: "consul Endpoint",

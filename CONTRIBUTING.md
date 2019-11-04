@@ -13,7 +13,7 @@ You need to run the `binary` target. This will create binaries for Linux platfor
 $ make binary
 docker build -t "traefik-dev:no-more-godep-ever" -f build.Dockerfile .
 Sending build context to Docker daemon 295.3 MB
-Step 0 : FROM golang:1.10-alpine
+Step 0 : FROM golang:1.12-alpine
  ---> 8c6473912976
 Step 1 : RUN go get github.com/golang/dep/cmd/dep
 [...]
@@ -32,7 +32,7 @@ traefik*
 ##### Setting up your `go` environment
 
 - You need `go` v1.9+
-- It is recommended you clone Træfik into a directory like `~/go/src/github.com/containous/traefik` (This is the official golang workspace hierarchy, and will allow dependencies to resolve properly)
+- It is recommended you clone Traefik into a directory like `~/go/src/github.com/containous/traefik` (This is the official golang workspace hierarchy, and will allow dependencies to resolve properly)
 - Set your `GOPATH` and `PATH` variable to be set to `~/go` via:
 
 ```bash
@@ -56,9 +56,9 @@ GORACE=""
 ## more go env's will be listed
 ```
 
-##### Build Træfik
+##### Build Traefik
 
-Once your environment is set up and the Træfik repository cloned you can build Træfik. You need get `go-bindata` once to be able to use `go generate` command as part of the build.  The steps to build are:
+Once your environment is set up and the Traefik repository cloned you can build Traefik. You need get `go-bindata` once to be able to use `go generate` command as part of the build.  The steps to build are:
 
 ```bash
 cd ~/go/src/github.com/containous/traefik
@@ -77,7 +77,7 @@ go build ./cmd/traefik
 # run other commands like tests
 ```
 
-You will find the Træfik executable in the `~/go/src/github.com/containous/traefik` folder as `traefik`.
+You will find the Traefik executable in the `~/go/src/github.com/containous/traefik` folder as `traefik`.
 
 ### Updating the templates
 
@@ -87,7 +87,7 @@ If you happen to update the provider templates (in `/templates`), you need to ru
 
 [dep](https://github.com/golang/dep) is not required for building; however, it is necessary to modify dependencies (i.e., add, update, or remove third-party packages)
 
-You need to use [dep](https://github.com/golang/dep) >= O.4.1.
+You need to use [dep](https://github.com/golang/dep) >= 0.5.0.
 
 If you want to add a dependency, use `dep ensure -add` to have [dep](https://github.com/golang/dep) put it into the vendor folder and update the dep manifest/lock files (`Gopkg.toml` and `Gopkg.lock`, respectively).
 
@@ -158,11 +158,13 @@ Integration tests must be run from the `integration/` directory and require the 
 
 ## Documentation
 
-The [documentation site](http://docs.traefik.io/) is built with [mkdocs](http://mkdocs.org/)
+The [documentation site](https://docs.traefik.io/v1.7/) is built with [mkdocs](https://mkdocs.org/)
 
-### Method 1: `Docker` and `make`
+### Building Documentation
 
-You can test documentation using the `docs` target.
+#### Method 1: `Docker` and `make`
+
+You can build the documentation and serve it locally with livereloading, using the `docs` target:
 
 ```bash
 $ make docs
@@ -177,11 +179,18 @@ docker run  --rm -v /home/user/go/github/containous/traefik:/mkdocs -p 8000:8000
 
 And go to [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
-### Method 2: `mkdocs`
+If you only want to build the documentation without serving it locally, you can use the following command:
+
+```bash
+$ make docs-build
+...
+```
+
+#### Method 2: `mkdocs`
 
 First make sure you have python and pip installed
 
-```shell
+```bash
 $ python --version
 Python 2.7.2
 $ pip --version
@@ -190,29 +199,57 @@ pip 1.5.2
 
 Then install mkdocs with pip
 
-```shell
+```bash
 pip install --user -r requirements.txt
 ```
 
-To test documentation locally run `mkdocs serve` in the root directory, this should start a server locally to preview your changes.
+To build documentation locally and serve it locally,
+run `mkdocs serve` in the root directory,
+this should start a server locally to preview your changes.
 
-```shell
+```bash
 $ mkdocs serve
 INFO    -  Building documentation...
-WARNING -  Config value: 'theme'. Warning: The theme 'united' will be removed in an upcoming MkDocs release. See http://www.mkdocs.org/about/release-notes/ for more details
 INFO    -  Cleaning site directory
 [I 160505 22:31:24 server:281] Serving on http://127.0.0.1:8000
 [I 160505 22:31:24 handlers:59] Start watching changes
 [I 160505 22:31:24 handlers:61] Start detecting changes
 ```
 
+### Verify Documentation
+
+You can verify that the documentation meets some expectations, as checking for dead links, html markup validity.
+
+```bash
+$ make docs-verify
+docker build -t traefik-docs-verify ./script/docs-verify-docker-image ## Build Validator image
+...
+docker run --rm -v /home/travis/build/containous/traefik:/app traefik-docs-verify ## Check for dead links and w3c compliance
+=== Checking HTML content...
+Running ["HtmlCheck", "ImageCheck", "ScriptCheck", "LinkCheck"] on /app/site/basics/index.html on *.html...
+```
+
+If you recently changed the documentation, do not forget to clean it to have it rebuilt:
+
+```bash
+$ make docs-clean docs-verify
+...
+```
+
+Please note that verification can be disabled by setting the environment variable `DOCS_VERIFY_SKIP` to `true`:
+
+```shell
+DOCS_VERIFY_SKIP=true make docs-verify
+...
+DOCS_LINT_SKIP is true: no linting done.
+```
 
 ## How to Write a Good Issue
 
 Please keep in mind that the GitHub issue tracker is not intended as a general support forum, but for reporting bugs and feature requests.
 
 For end-user related support questions, refer to one of the following:
-- the Traefik community Slack channel: [![Join the chat at https://traefik.herokuapp.com](https://img.shields.io/badge/style-register-green.svg?style=social&label=Slack)](https://traefik.herokuapp.com)
+- the Traefik community Slack channel: [![Join the chat at https://slack.traefik.io](https://img.shields.io/badge/style-register-green.svg?style=social&label=Slack)](https://slack.traefik.io)
 - [Stack Overflow](https://stackoverflow.com/questions/tagged/traefik) (using the `traefik` tag)
 
 ### Title

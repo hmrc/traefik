@@ -371,11 +371,20 @@ func TestGetHealthCheck(t *testing.T) {
 				TraefikBackendHealthCheckPath:     "/health",
 				TraefikBackendHealthCheckPort:     "80",
 				TraefikBackendHealthCheckInterval: "6",
+				TraefikBackendHealthCheckHeaders:  "Foo:bar || Goo:bir",
+				TraefikBackendHealthCheckHostname: "traefik",
+				TraefikBackendHealthCheckScheme:   "http",
 			},
 			expected: &types.HealthCheck{
+				Scheme:   "http",
 				Path:     "/health",
 				Port:     80,
 				Interval: "6",
+				Hostname: "traefik",
+				Headers: map[string]string{
+					"Foo": "bar",
+					"Goo": "bir",
+				},
 			},
 		},
 	}
@@ -606,6 +615,7 @@ func TestGetHeaders(t *testing.T) {
 				TraefikFrontendCustomBrowserXSSValue:   "foo",
 				TraefikFrontendSTSSeconds:              "666",
 				TraefikFrontendSSLRedirect:             "true",
+				TraefikFrontendSSLForceHost:            "true",
 				TraefikFrontendSSLTemporaryRedirect:    "true",
 				TraefikFrontendSTSIncludeSubdomains:    "true",
 				TraefikFrontendSTSPreload:              "true",
@@ -637,6 +647,7 @@ func TestGetHeaders(t *testing.T) {
 				ReferrerPolicy:          "foo",
 				CustomBrowserXSSValue:   "foo",
 				STSSeconds:              666,
+				SSLForceHost:            true,
 				SSLRedirect:             true,
 				SSLTemporaryRedirect:    true,
 				STSIncludeSubdomains:    true,
@@ -704,6 +715,284 @@ func TestProviderGetErrorPages(t *testing.T) {
 			t.Parallel()
 
 			result := GetErrorPages(test.labels)
+
+			assert.Equal(t, test.expected, result)
+		})
+	}
+}
+
+func TestGetAuth(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		labels   map[string]string
+		expected *types.Auth
+	}{
+		{
+			desc:     "should return nil when no tags",
+			labels:   map[string]string{},
+			expected: nil,
+		},
+		{
+			desc: "should return nil when no real auth",
+			labels: map[string]string{
+				TraefikFrontendAuthHeaderField: "myHeaderField",
+			},
+			expected: nil,
+		},
+		{
+			desc: "should return a basic auth",
+			labels: map[string]string{
+				TraefikFrontendAuthHeaderField:       "myHeaderField",
+				TraefikFrontendAuthBasicUsers:        "user:pwd,user2:pwd2",
+				TraefikFrontendAuthBasicUsersFile:    "myUsersFile",
+				TraefikFrontendAuthBasicRemoveHeader: "true",
+			},
+			expected: &types.Auth{
+				HeaderField: "myHeaderField",
+				Basic:       &types.Basic{UsersFile: "myUsersFile", Users: []string{"user:pwd", "user2:pwd2"}, RemoveHeader: true},
+			},
+		},
+		{
+			desc: "should return a digest auth",
+			labels: map[string]string{
+				TraefikFrontendAuthDigestRemoveHeader: "true",
+				TraefikFrontendAuthHeaderField:        "myHeaderField",
+				TraefikFrontendAuthDigestUsers:        "user:pwd,user2:pwd2",
+				TraefikFrontendAuthDigestUsersFile:    "myUsersFile",
+			},
+			expected: &types.Auth{
+				HeaderField: "myHeaderField",
+				Digest:      &types.Digest{UsersFile: "myUsersFile", Users: []string{"user:pwd", "user2:pwd2"}, RemoveHeader: true},
+			},
+		},
+		{
+			desc: "should return a forward auth",
+			labels: map[string]string{
+				TraefikFrontendAuthHeaderField:                  "myHeaderField",
+				TraefikFrontendAuthForwardAddress:               "myAddress",
+				TraefikFrontendAuthForwardTrustForwardHeader:    "true",
+				TraefikFrontendAuthForwardTLSCa:                 "ca.crt",
+				TraefikFrontendAuthForwardTLSCaOptional:         "true",
+				TraefikFrontendAuthForwardTLSInsecureSkipVerify: "true",
+				TraefikFrontendAuthForwardTLSKey:                "myKey",
+				TraefikFrontendAuthForwardTLSCert:               "myCert",
+			},
+			expected: &types.Auth{
+				HeaderField: "myHeaderField",
+				Forward: &types.Forward{
+					TrustForwardHeader: true,
+					Address:            "myAddress",
+					TLS: &types.ClientTLS{
+						InsecureSkipVerify: true,
+						CA:                 "ca.crt",
+						CAOptional:         true,
+						Key:                "myKey",
+						Cert:               "myCert",
+					},
+				},
+			},
+		},
+	}
+
+	for _, test := range testCases {
+		test := test
+		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
+			result := GetAuth(test.labels)
+
+			assert.Equal(t, test.expected, result)
+		})
+	}
+}
+func TestGetPassTLSClientCert(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		labels   map[string]string
+		expected *types.TLSClientHeaders
+	}{
+		{
+			desc:     "should return nil when no tags",
+			labels:   map[string]string{},
+			expected: nil,
+		},
+		{
+			desc: "should return tlsClientHeaders with true pem flag",
+			labels: map[string]string{
+				TraefikFrontendPassTLSClientCertPem: "true",
+			},
+			expected: &types.TLSClientHeaders{
+				PEM: true,
+			},
+		},
+		{
+			desc: "should return tlsClientHeaders with infos and NotAfter true",
+			labels: map[string]string{
+				TraefikFrontendPassTLSClientCertInfosNotAfter: "true",
+			},
+			expected: &types.TLSClientHeaders{
+				Infos: &types.TLSClientCertificateInfos{
+					NotAfter: true,
+				},
+			},
+		},
+		{
+			desc: "should return tlsClientHeaders with infos and NotBefore true",
+			labels: map[string]string{
+				TraefikFrontendPassTLSClientCertInfosNotBefore: "true",
+			},
+			expected: &types.TLSClientHeaders{
+				Infos: &types.TLSClientCertificateInfos{
+					NotBefore: true,
+				},
+			},
+		},
+		{
+			desc: "should return tlsClientHeaders with infos and sans true",
+			labels: map[string]string{
+				TraefikFrontendPassTLSClientCertInfosSans: "true",
+			},
+			expected: &types.TLSClientHeaders{
+				Infos: &types.TLSClientCertificateInfos{
+					Sans: true,
+				},
+			},
+		},
+		{
+			desc: "should return tlsClientHeaders with infos and subject with commonName true",
+			labels: map[string]string{
+				TraefikFrontendPassTLSClientCertInfosSubjectCommonName: "true",
+			},
+			expected: &types.TLSClientHeaders{
+				Infos: &types.TLSClientCertificateInfos{
+					Subject: &types.TLSCLientCertificateDNInfos{
+						CommonName: true,
+					},
+				},
+			},
+		},
+		{
+			desc: "should return tlsClientHeaders with infos and subject with country true",
+			labels: map[string]string{
+				TraefikFrontendPassTLSClientCertInfosSubjectCountry: "true",
+			},
+			expected: &types.TLSClientHeaders{
+				Infos: &types.TLSClientCertificateInfos{
+					Subject: &types.TLSCLientCertificateDNInfos{
+						Country: true,
+					},
+				},
+			},
+		},
+		{
+			desc: "should return tlsClientHeaders with infos and subject with locality true",
+			labels: map[string]string{
+				TraefikFrontendPassTLSClientCertInfosSubjectLocality: "true",
+			},
+			expected: &types.TLSClientHeaders{
+				Infos: &types.TLSClientCertificateInfos{
+					Subject: &types.TLSCLientCertificateDNInfos{
+						Locality: true,
+					},
+				},
+			},
+		},
+		{
+			desc: "should return tlsClientHeaders with infos and subject with organization true",
+			labels: map[string]string{
+				TraefikFrontendPassTLSClientCertInfosSubjectOrganization: "true",
+			},
+			expected: &types.TLSClientHeaders{
+				Infos: &types.TLSClientCertificateInfos{
+					Subject: &types.TLSCLientCertificateDNInfos{
+						Organization: true,
+					},
+				},
+			},
+		},
+		{
+			desc: "should return tlsClientHeaders with infos and subject with province true",
+			labels: map[string]string{
+				TraefikFrontendPassTLSClientCertInfosSubjectProvince: "true",
+			},
+			expected: &types.TLSClientHeaders{
+				Infos: &types.TLSClientCertificateInfos{
+					Subject: &types.TLSCLientCertificateDNInfos{
+						Province: true,
+					},
+				},
+			},
+		},
+		{
+			desc: "should return tlsClientHeaders with infos and subject with serialNumber true",
+			labels: map[string]string{
+				TraefikFrontendPassTLSClientCertInfosSubjectSerialNumber: "true",
+			},
+			expected: &types.TLSClientHeaders{
+				Infos: &types.TLSClientCertificateInfos{
+					Subject: &types.TLSCLientCertificateDNInfos{
+						SerialNumber: true,
+					},
+				},
+			},
+		},
+		{
+			desc: "should return tlsClientHeaders with all infos",
+			labels: map[string]string{
+				TraefikFrontendPassTLSClientCertPem:                         "true",
+				TraefikFrontendPassTLSClientCertInfosNotAfter:               "true",
+				TraefikFrontendPassTLSClientCertInfosNotBefore:              "true",
+				TraefikFrontendPassTLSClientCertInfosSans:                   "true",
+				TraefikFrontendPassTLSClientCertInfosIssuerCommonName:       "true",
+				TraefikFrontendPassTLSClientCertInfosIssuerCountry:          "true",
+				TraefikFrontendPassTLSClientCertInfosIssuerDomainComponent:  "true",
+				TraefikFrontendPassTLSClientCertInfosIssuerLocality:         "true",
+				TraefikFrontendPassTLSClientCertInfosIssuerOrganization:     "true",
+				TraefikFrontendPassTLSClientCertInfosIssuerProvince:         "true",
+				TraefikFrontendPassTLSClientCertInfosIssuerSerialNumber:     "true",
+				TraefikFrontendPassTLSClientCertInfosSubjectCommonName:      "true",
+				TraefikFrontendPassTLSClientCertInfosSubjectCountry:         "true",
+				TraefikFrontendPassTLSClientCertInfosSubjectDomainComponent: "true",
+				TraefikFrontendPassTLSClientCertInfosSubjectLocality:        "true",
+				TraefikFrontendPassTLSClientCertInfosSubjectOrganization:    "true",
+				TraefikFrontendPassTLSClientCertInfosSubjectProvince:        "true",
+				TraefikFrontendPassTLSClientCertInfosSubjectSerialNumber:    "true",
+			},
+			expected: &types.TLSClientHeaders{
+				PEM: true,
+				Infos: &types.TLSClientCertificateInfos{
+					Sans:      true,
+					NotBefore: true,
+					NotAfter:  true,
+					Subject: &types.TLSCLientCertificateDNInfos{
+						CommonName:      true,
+						Country:         true,
+						DomainComponent: true,
+						Locality:        true,
+						Organization:    true,
+						Province:        true,
+						SerialNumber:    true,
+					},
+					Issuer: &types.TLSCLientCertificateDNInfos{
+						CommonName:      true,
+						Country:         true,
+						DomainComponent: true,
+						Locality:        true,
+						Organization:    true,
+						Province:        true,
+						SerialNumber:    true,
+					},
+				},
+			},
+		},
+	}
+
+	for _, test := range testCases {
+		test := test
+		t.Run(test.desc, func(t *testing.T) {
+			t.Parallel()
+
+			result := GetTLSClientCert(test.labels)
 
 			assert.Equal(t, test.expected, result)
 		})

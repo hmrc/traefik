@@ -20,7 +20,7 @@
     # Buckets for latency metrics
     #
     # Optional
-    # Default: [0.1, 0.3, 1.2, 5]
+    # Default: [0.1, 0.3, 1.2, 5.0]
     #
     buckets = [0.1,0.3,1.2,5.0]
 
@@ -97,12 +97,33 @@
     #
     address = "localhost:8089"
 
+    # InfluxDB's address protocol (udp or http)
+    #
+    # Required
+    # Default: "udp"
+    #
+    protocol = "udp"
+
     # InfluxDB push interval
     #
     # Optional
     # Default: "10s"
     #
     pushinterval = "10s"
+
+    # InfluxDB database used when protocol is http
+    #
+    # Optional
+    # Default: ""
+    #
+    database = ""
+
+    # InfluxDB retention policy used when protocol is http
+    #
+    # Optional
+    # Default: ""
+    #
+    retentionpolicy = ""
 
   # ...
 ```

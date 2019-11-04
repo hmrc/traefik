@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	xForwardedURI = "X-Forwarded-Uri"
+	xForwardedURI    = "X-Forwarded-Uri"
+	xForwardedMethod = "X-Forwarded-Method"
 )
 
 // Forward the authentication to a external server
@@ -39,7 +40,7 @@ func Forward(config *types.Forward, w http.ResponseWriter, r *http.Request, next
 		}
 	}
 
-	forwardReq, err := http.NewRequest(http.MethodGet, config.Address, nil)
+	forwardReq, err := http.NewRequest(http.MethodGet, config.Address, http.NoBody)
 	tracing.LogRequest(tracing.GetSpan(r), forwardReq)
 	if err != nil {
 		tracing.SetErrorAndDebugLog(r, "Error calling %s. Cause %s", config.Address, err)
@@ -72,6 +73,7 @@ func Forward(config *types.Forward, w http.ResponseWriter, r *http.Request, next
 		log.Debugf("Remote error %s. StatusCode: %d", config.Address, forwardResponse.StatusCode)
 
 		utils.CopyHeaders(w.Header(), forwardResponse.Header)
+		utils.RemoveHeaders(w.Header(), forward.HopHeaders...)
 
 		// Grab the location header, if any.
 		redirectURL, err := forwardResponse.Location()
@@ -93,12 +95,21 @@ func Forward(config *types.Forward, w http.ResponseWriter, r *http.Request, next
 		return
 	}
 
+	for _, headerName := range config.AuthResponseHeaders {
+		headerKey := http.CanonicalHeaderKey(headerName)
+		r.Header.Del(headerKey)
+		if len(forwardResponse.Header[headerKey]) > 0 {
+			r.Header[headerKey] = append([]string(nil), forwardResponse.Header[headerKey]...)
+		}
+	}
+
 	r.RequestURI = r.URL.RequestURI()
 	next(w, r)
 }
 
 func writeHeader(req *http.Request, forwardReq *http.Request, trustForwardHeader bool) {
 	utils.CopyHeaders(forwardReq.Header, req.Header)
+	utils.RemoveHeaders(forwardReq.Header, forward.HopHeaders...)
 
 	if clientIP, _, err := net.SplitHostPort(req.RemoteAddr); err == nil {
 		if trustForwardHeader {
@@ -107,6 +118,14 @@ func writeHeader(req *http.Request, forwardReq *http.Request, trustForwardHeader
 			}
 		}
 		forwardReq.Header.Set(forward.XForwardedFor, clientIP)
+	}
+
+	if xMethod := req.Header.Get(xForwardedMethod); xMethod != "" && trustForwardHeader {
+		forwardReq.Header.Set(xForwardedMethod, xMethod)
+	} else if req.Method != "" {
+		forwardReq.Header.Set(xForwardedMethod, req.Method)
+	} else {
+		forwardReq.Header.Del(xForwardedMethod)
 	}
 
 	if xfp := req.Header.Get(forward.XForwardedProto); xfp != "" && trustForwardHeader {

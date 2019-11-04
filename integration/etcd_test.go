@@ -155,7 +155,7 @@ func (s *EtcdSuite) TestNominalConfiguration(c *check.C) {
 	})
 	c.Assert(err, checker.IsNil)
 
-	// wait for Træfik
+	// wait for Traefik
 	err = try.GetRequest("http://127.0.0.1:8081/api/providers", 60*time.Second, try.BodyContains("Path:/test"))
 	c.Assert(err, checker.IsNil)
 
@@ -213,7 +213,7 @@ func (s *EtcdSuite) TestGlobalConfiguration(c *check.C) {
 	})
 	c.Assert(err, checker.IsNil)
 
-	// start Træfik
+	// start Traefik
 	cmd, display := s.traefikCmd(
 		withConfigFile("fixtures/simple_web.toml"),
 		"--etcd",
@@ -293,7 +293,7 @@ func (s *EtcdSuite) TestGlobalConfiguration(c *check.C) {
 
 func (s *EtcdSuite) TestCertificatesContentWithSNIConfigHandshake(c *check.C) {
 	etcdHost := s.composeProject.Container(c, "etcd").NetworkSettings.IPAddress
-	// start Træfik
+	// start Traefik
 	cmd, display := s.traefikCmd(
 		withConfigFile("fixtures/simple_web.toml"),
 		"--etcd",
@@ -315,13 +315,13 @@ func (s *EtcdSuite) TestCertificatesContentWithSNIConfigHandshake(c *check.C) {
 	snitestOrgKey, err := ioutil.ReadFile("fixtures/https/snitest.org.key")
 	c.Assert(err, checker.IsNil)
 
-	globalConfig := map[string]string{
-		"/traefik/entrypoints/https/address":                     ":4443",
-		"/traefik/entrypoints/https/tls/certificates/0/certfile": string(snitestComCert),
-		"/traefik/entrypoints/https/tls/certificates/0/keyfile":  string(snitestComKey),
-		"/traefik/entrypoints/https/tls/certificates/1/certfile": string(snitestOrgCert),
-		"/traefik/entrypoints/https/tls/certificates/1/keyfile":  string(snitestOrgKey),
-		"/traefik/defaultentrypoints/0":                          "https",
+	globalConfig := map[string][]byte{
+		"/traefik/entrypoints/https/address":                     []byte(":4443"),
+		"/traefik/entrypoints/https/tls/certificates/0/certfile": snitestComCert,
+		"/traefik/entrypoints/https/tls/certificates/0/keyfile":  snitestComKey,
+		"/traefik/entrypoints/https/tls/certificates/1/certfile": snitestOrgCert,
+		"/traefik/entrypoints/https/tls/certificates/1/keyfile":  snitestOrgKey,
+		"/traefik/defaultentrypoints/0":                          []byte("https"),
 	}
 
 	backend1 := map[string]string{
@@ -351,7 +351,7 @@ func (s *EtcdSuite) TestCertificatesContentWithSNIConfigHandshake(c *check.C) {
 		"/traefik/frontends/frontend2/routes/test_2/rule": "Host:snitest.org",
 	}
 	for key, value := range globalConfig {
-		err := s.kv.Put(key, []byte(value), nil)
+		err := s.kv.Put(key, value, nil)
 		c.Assert(err, checker.IsNil)
 	}
 	for key, value := range backend1 {
@@ -411,7 +411,7 @@ func (s *EtcdSuite) TestCommandStoreConfig(c *check.C) {
 	err := cmd.Start()
 	c.Assert(err, checker.IsNil)
 
-	// wait for Træfik finish without error
+	// wait for Traefik finish without error
 	cmd.Wait()
 
 	// CHECK
@@ -437,7 +437,7 @@ func (s *EtcdSuite) TestCommandStoreConfig(c *check.C) {
 
 func (s *EtcdSuite) TestSNIDynamicTlsConfig(c *check.C) {
 	etcdHost := s.composeProject.Container(c, "etcd").NetworkSettings.IPAddress
-	// start Træfik
+	// start Traefik
 	cmd, display := s.traefikCmd(
 		withConfigFile("fixtures/etcd/simple_https.toml"),
 		"--etcd",
@@ -554,7 +554,7 @@ func (s *EtcdSuite) TestSNIDynamicTlsConfig(c *check.C) {
 	req.Header.Set("Host", tr1.TLSClientConfig.ServerName)
 	req.Header.Set("Accept", "*/*")
 
-	err = try.RequestWithTransport(req, 30*time.Second, tr1, try.HasCn("snitest.com"))
+	err = try.RequestWithTransport(req, 30*time.Second, tr1, try.HasCn(tr1.TLSClientConfig.ServerName))
 	c.Assert(err, checker.IsNil)
 
 	// now we configure the second keypair in etcd and the request for host "snitest.org" will use the second keypair
@@ -577,6 +577,6 @@ func (s *EtcdSuite) TestSNIDynamicTlsConfig(c *check.C) {
 	req.Header.Set("Host", tr2.TLSClientConfig.ServerName)
 	req.Header.Set("Accept", "*/*")
 
-	err = try.RequestWithTransport(req, 30*time.Second, tr2, try.HasCn("snitest.org"))
+	err = try.RequestWithTransport(req, 30*time.Second, tr2, try.HasCn(tr2.TLSClientConfig.ServerName))
 	c.Assert(err, checker.IsNil)
 }

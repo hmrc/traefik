@@ -14,12 +14,12 @@ Let's take our example from the [overview](/#overview) again:
 
 > ![Architecture](img/architecture.png)
 
-Let's zoom on Træfik and have an overview of its internal architecture:
+Let's zoom on Traefik and have an overview of its internal architecture:
 
 
 ![Architecture](img/internal.png)
 
-- Incoming requests end on [entrypoints](#entrypoints), as the name suggests, they are the network entry points into Træfik (listening port, SSL, traffic redirection...).
+- Incoming requests end on [entrypoints](#entrypoints), as the name suggests, they are the network entry points into Traefik (listening port, SSL, traffic redirection...).
 - Traffic is then forwarded to a matching [frontend](#frontends). A frontend defines routes from [entrypoints](#entrypoints) to [backends](#backends).
 Routes are created using requests fields (`Host`, `Path`, `Headers`...) and can match or not a request.
 - The [frontend](#frontends) will then send the request to a [backend](#backends). A backend can be composed by one or more [servers](#servers), and by a load-balancing strategy.
@@ -27,7 +27,7 @@ Routes are created using requests fields (`Host`, `Path`, `Headers`...) and can 
 
 ### Entrypoints
 
-Entrypoints are the network entry points into Træfik.
+Entrypoints are the network entry points into Traefik.
 They can be defined using:
 
 - a port (80, 443...)
@@ -94,10 +94,13 @@ Following is the list of existing modifier rules:
 
 Matcher rules determine if a particular request should be forwarded to a backend.
 
-Separate multiple rule values by `,` (comma) in order to enable ANY semantics (i.e., forward a request if any rule matches).
-Does not work for `Headers` and `HeadersRegexp`.
+The associativity rule is the following:
 
-Separate multiple rule values by `;` (semicolon) in order to enable ALL semantics (i.e., forward a request if all rules match).
+- `,` is the `OR` operator (works **only inside a matcher**, ex: `Host:foo.com,bar.com`).
+    - i.e., forward a request if any rule matches.
+    - Does not work for `Headers` and `HeadersRegexp`.
+- `;` is the `AND` operator (works **only between matchers**, ex: `Host:foo.com;Path:/bar`) 
+    - i.e., forward a request if all rules match
 
 Following is the list of existing matcher rules along with examples:
 
@@ -122,7 +125,7 @@ In order to use regular expressions with Host and Path matchers, you must declar
     The variable has no special meaning; however, it is required by the [gorilla/mux](https://github.com/gorilla/mux) dependency which embeds the regular expression and defines the syntax.
 
 You can optionally enable `passHostHeader` to forward client `Host` header to the backend.
-You can also optionally enable `passTLSCert` to forward TLS Client certificates to the backend.
+You can also optionally configure the `passTLSClientCert` option to pass the Client certificates to the backend in a specific header.
 
 ##### Path Matcher Usage Guidelines
 
@@ -157,7 +160,8 @@ Here is an example of frontends definition:
   [frontends.frontend2]
   backend = "backend1"
   passHostHeader = true
-  passTLSCert = true
+  [frontends.frontend2.passTLSClientCert]
+    pem = true
   priority = 10
   entrypoints = ["https"] # overrides defaultEntryPoints
     [frontends.frontend2.routes.test_1]
@@ -233,7 +237,8 @@ The following rules are both `Matchers` and `Modifiers`, so the `Matcher` portio
 #### Priorities
 
 By default, routes will be sorted (in descending order) using rules length (to avoid path overlap):
-`PathPrefix:/foo;Host:foo.com` (length == 28) will be matched before `PathPrefixStrip:/foobar` (length == 23) will be matched before `PathPrefix:/foo,/bar` (length == 20).
+- `PathPrefix:/foo;Host:foo.com` (length == 28) will be matched before `PathPrefixStrip:/foobar` (length == 23) will be matched before `PathPrefix:/foo,/bar` (length == 20).  
+- A priority value of 0 will be ignored, so the default value will be calculated (rules length).
 
 You can customize priority by frontend. The priority value override the rule length during sorting:
 
@@ -345,16 +350,22 @@ Here is an example of backends and servers definition:
   [backends.backend2]
     # ...
     [backends.backend2.servers.server1]
-    url = "http://172.17.0.4:80"
+    url = "https://172.17.0.4:443"
     weight = 1
     [backends.backend2.servers.server2]
-    url = "http://172.17.0.5:80"
+    url = "https://172.17.0.5:443"
     weight = 2
+  [backends.backend3]
+    # ...
+    [backends.backend3.servers.server1]
+    url = "h2c://172.17.0.6:80"
+    weight = 1
 ```
 
 - Two backends are defined: `backend1` and `backend2`
-- `backend1` will forward the traffic to two servers: `http://172.17.0.2:80"` with weight `10` and `http://172.17.0.3:80` with weight `1`.
-- `backend2` will forward the traffic to two servers: `http://172.17.0.4:80"` with weight `1` and `http://172.17.0.5:80` with weight `2`.
+- `backend1` will forward the traffic to two servers: `172.17.0.2:80` with weight `10` and `172.17.0.3:80` with weight `1`.
+- `backend2` will forward the traffic to two servers: `172.17.0.4:443` with weight `1` and `172.17.0.5:443` with weight `2` both using TLS.
+- `backend3` will forward the traffic to: `172.17.0.6:80` with weight `1` using HTTP2 without TLS.
 
 #### Load-balancing
 
@@ -454,13 +465,12 @@ The deprecated way:
 
 #### Health Check
 
-A health check can be configured in order to remove a backend from LB rotation as long as it keeps returning HTTP status codes other than `200 OK` to HTTP GET requests periodically carried out by Traefik.  
+A health check can be configured in order to remove a backend from LB rotation as long as it keeps returning HTTP status codes other than `2xx` or `3xx` to HTTP GET requests periodically carried out by Traefik.  
 The check is defined by a path appended to the backend URL and an interval (given in a format understood by [time.ParseDuration](https://golang.org/pkg/time/#ParseDuration)) specifying how often the health check should be executed (the default being 30 seconds).
 Each backend must respond to the health check within 5 seconds.  
 By default, the port of the backend server is used, however, this may be overridden.
 
-A recovering backend returning 200 OK responses again is being returned to the
-LB rotation pool.
+A recovering backend returning `2xx` or `3xx` responses again is being returned to the LB rotation pool.
 
 For example:
 ```toml
@@ -471,7 +481,7 @@ For example:
     interval = "10s"
 ```
 
-To use a different port for the healthcheck:
+To use a different port for the health check:
 ```toml
 [backends]
   [backends.backend1]
@@ -481,18 +491,43 @@ To use a different port for the healthcheck:
     port = 8080
 ```
 
+
+To use a different scheme for the health check:
+```toml
+[backends]
+  [backends.backend1]
+    [backends.backend1.healthcheck]
+    path = "/health"
+    interval = "10s"
+    scheme = "http"
+```
+
+Additional http headers and hostname to health check request can be specified, for instance:
+```toml
+[backends]
+  [backends.backend1]
+    [backends.backend1.healthcheck]
+    path = "/health"
+    interval = "10s"
+    hostname = "myhost.com"
+    port = 8080
+      [backends.backend1.healthcheck.headers]
+      My-Custom-Header = "foo"
+      My-Header = "bar"
+```
+
 ## Configuration
 
-Træfik's configuration has two parts:
+Traefik's configuration has two parts:
 
-- The [static Træfik configuration](/basics#static-trfik-configuration) which is loaded only at the beginning.
-- The [dynamic Træfik configuration](/basics#dynamic-trfik-configuration) which can be hot-reloaded (no need to restart the process).
+- The [static Traefik configuration](/basics#static-traefik-configuration) which is loaded only at the beginning.
+- The [dynamic Traefik configuration](/basics#dynamic-traefik-configuration) which can be hot-reloaded (no need to restart the process).
 
-### Static Træfik configuration
+### Static Traefik configuration
 
 The static configuration is the global configuration which is setting up connections to configuration backends and entrypoints.
 
-Træfik can be configured using many configuration sources with the following precedence order.
+Traefik can be configured using many configuration sources with the following precedence order.
 Each item takes precedence over the item below it:
 
 - [Key-value store](/basics/#key-value-stores)
@@ -508,7 +543,7 @@ It means that arguments override configuration file, and key-value store overrid
 
 #### Configuration file
 
-By default, Træfik will try to find a `traefik.toml` in the following places:
+By default, Traefik will try to find a `traefik.toml` in the following places:
 
 - `/etc/traefik/`
 - `$HOME/.traefik/`
@@ -534,7 +569,7 @@ Note that all default values will be displayed as well.
 
 #### Key-value stores
 
-Træfik supports several Key-value stores:
+Traefik supports several Key-value stores:
 
 - [Consul](https://consul.io)
 - [etcd](https://coreos.com/etcd/)
@@ -543,7 +578,7 @@ Træfik supports several Key-value stores:
 
 Please refer to the [User Guide Key-value store configuration](/user-guide/kv-config/) section to get documentation on it.
 
-### Dynamic Træfik configuration
+### Dynamic Traefik configuration
 
 The dynamic configuration concerns :
 
@@ -552,9 +587,9 @@ The dynamic configuration concerns :
 - [Servers](/basics/#servers)
 - HTTPS Certificates
 
-Træfik can hot-reload those rules which could be provided by [multiple configuration backends](/configuration/commons).
+Traefik can hot-reload those rules which could be provided by [multiple configuration backends](/configuration/commons).
 
-We only need to enable `watch` option to make Træfik watch configuration backend changes and generate its configuration automatically.
+We only need to enable `watch` option to make Traefik watch configuration backend changes and generate its configuration automatically.
 Routes to services will be created and updated instantly at any changes.
 
 Please refer to the [configuration backends](/configuration/commons) section to get documentation on it.
@@ -568,10 +603,10 @@ Usage:
 traefik [command] [--flag=flag_argument]
 ```
 
-List of Træfik available commands with description :
+List of Traefik available commands with description :
 
 - `version` : Print version
-- `storeconfig` : Store the static Traefik configuration into a Key-value stores. Please refer to the [Store Træfik configuration](/user-guide/kv-config/#store-configuration-in-key-value-store) section to get documentation on it.
+- `storeconfig` : Store the static Traefik configuration into a Key-value stores. Please refer to the [Store Traefik configuration](/user-guide/kv-config/#store-configuration-in-key-value-store) section to get documentation on it.
 - `bug`: The easiest way to submit a pre-filled issue.
 - `healthcheck`: Calls Traefik `/ping` to check health.
 
@@ -596,7 +631,7 @@ docker run traefik[:version] --help
 
 ### Command: bug
 
-Here is the easiest way to submit a pre-filled issue on [Træfik GitHub](https://github.com/containous/traefik).
+Here is the easiest way to submit a pre-filled issue on [Traefik GitHub](https://github.com/containous/traefik).
 
 ```bash
 traefik bug
@@ -629,14 +664,14 @@ You can read the public proposal on this topic [here](https://github.com/contain
 
 ### Why ?
 
-In order to help us learn more about how Træfik is being used and improve it, we collect anonymous usage statistics from running instances.
+In order to help us learn more about how Traefik is being used and improve it, we collect anonymous usage statistics from running instances.
 Those data help us prioritize our developments and focus on what's more important (for example, which configuration backend is used and which is not used).
 
 ### What ?
 
-Once a day (the first call begins 10 minutes after the start of Træfik), we collect:
+Once a day (the first call begins 10 minutes after the start of Traefik), we collect:
 
-- the Træfik version
+- the Traefik version
 - a hash of the configuration
 - an **anonymous version** of the static configuration:
     - token, user name, password, URL, IP, domain, email, etc, are removed
@@ -711,11 +746,9 @@ Once a day (the first call begins 10 minutes after the start of Træfik), we col
 
 ### Show me the code !
 
-If you want to dig into more details, here is the source code of the collecting system: [collector.go](https://github.com/containous/traefik/blob/master/collector/collector.go)
+If you want to dig into more details, here is the source code of the collecting system: [collector.go](https://github.com/containous/traefik/blob/v1.7/collector/collector.go)
 
 By default we anonymize all configuration fields, except fields tagged with `export=true`.
-
-You can check all fields in the [godoc](https://godoc.org/github.com/containous/traefik/configuration#GlobalConfiguration).
 
 ### How to enable this ?
 

@@ -1,6 +1,6 @@
 # Rest Provider
 
-Træfik can be configured:
+Traefik can be configured:
 
 - using a RESTful api.
 
@@ -29,7 +29,7 @@ Træfik can be configured:
 
 
 ```shell
-curl -XPUT @file "http://localhost:8080/api/providers/rest"
+curl -XPUT -d @file "http://localhost:8080/api/providers/rest"
 ```
 
 with `@file`:

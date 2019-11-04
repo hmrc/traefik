@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"strings"
 
 	goauth "github.com/abbot/go-http-auth"
 	"github.com/containous/traefik/log"
+	"github.com/containous/traefik/middlewares/accesslog"
 	"github.com/containous/traefik/middlewares/tracing"
 	"github.com/containous/traefik/types"
 	"github.com/urfave/negroni"
@@ -26,43 +26,52 @@ type tracingAuthenticator struct {
 	clientSpanKind bool
 }
 
+const (
+	authorizationHeader = "Authorization"
+)
+
 // NewAuthenticator builds a new Authenticator given a config
 func NewAuthenticator(authConfig *types.Auth, tracingMiddleware *tracing.Tracing) (*Authenticator, error) {
 	if authConfig == nil {
 		return nil, fmt.Errorf("error creating Authenticator: auth is nil")
 	}
+
 	var err error
-	authenticator := Authenticator{}
-	tracingAuthenticator := tracingAuthenticator{}
+	authenticator := &Authenticator{}
+	tracingAuth := tracingAuthenticator{}
+
 	if authConfig.Basic != nil {
 		authenticator.users, err = parserBasicUsers(authConfig.Basic)
 		if err != nil {
 			return nil, err
 		}
+
 		basicAuth := goauth.NewBasicAuthenticator("traefik", authenticator.secretBasic)
-		tracingAuthenticator.handler = createAuthBasicHandler(basicAuth, authConfig)
-		tracingAuthenticator.name = "Auth Basic"
-		tracingAuthenticator.clientSpanKind = false
+		tracingAuth.handler = createAuthBasicHandler(basicAuth, authConfig)
+		tracingAuth.name = "Auth Basic"
+		tracingAuth.clientSpanKind = false
 	} else if authConfig.Digest != nil {
 		authenticator.users, err = parserDigestUsers(authConfig.Digest)
 		if err != nil {
 			return nil, err
 		}
+
 		digestAuth := goauth.NewDigestAuthenticator("traefik", authenticator.secretDigest)
-		tracingAuthenticator.handler = createAuthDigestHandler(digestAuth, authConfig)
-		tracingAuthenticator.name = "Auth Digest"
-		tracingAuthenticator.clientSpanKind = false
+		tracingAuth.handler = createAuthDigestHandler(digestAuth, authConfig)
+		tracingAuth.name = "Auth Digest"
+		tracingAuth.clientSpanKind = false
 	} else if authConfig.Forward != nil {
-		tracingAuthenticator.handler = createAuthForwardHandler(authConfig)
-		tracingAuthenticator.name = "Auth Forward"
-		tracingAuthenticator.clientSpanKind = true
+		tracingAuth.handler = createAuthForwardHandler(authConfig)
+		tracingAuth.name = "Auth Forward"
+		tracingAuth.clientSpanKind = true
 	}
+
 	if tracingMiddleware != nil {
-		authenticator.handler = tracingMiddleware.NewNegroniHandlerWrapper(tracingAuthenticator.name, tracingAuthenticator.handler, tracingAuthenticator.clientSpanKind)
+		authenticator.handler = tracingMiddleware.NewNegroniHandlerWrapper(tracingAuth.name, tracingAuth.handler, tracingAuth.clientSpanKind)
 	} else {
-		authenticator.handler = tracingAuthenticator.handler
+		authenticator.handler = tracingAuth.handler
 	}
-	return &authenticator, nil
+	return authenticator, nil
 }
 
 func createAuthForwardHandler(authConfig *types.Auth) negroni.HandlerFunc {
@@ -77,9 +86,16 @@ func createAuthDigestHandler(digestAuth *goauth.DigestAuth, authConfig *types.Au
 			digestAuth.RequireAuth(w, r)
 		} else {
 			log.Debugf("Digest auth succeeded")
-			r.URL.User = url.User(username)
+
+			// set username in request context
+			r = accesslog.WithUserName(r, username)
+
 			if authConfig.HeaderField != "" {
 				r.Header[authConfig.HeaderField] = []string{username}
+			}
+			if authConfig.Digest.RemoveHeader {
+				log.Debugf("Remove the Authorization header from the Digest auth")
+				r.Header.Del(authorizationHeader)
 			}
 			next.ServeHTTP(w, r)
 		}
@@ -92,9 +108,16 @@ func createAuthBasicHandler(basicAuth *goauth.BasicAuth, authConfig *types.Auth)
 			basicAuth.RequireAuth(w, r)
 		} else {
 			log.Debugf("Basic auth succeeded")
-			r.URL.User = url.User(username)
+
+			// set username in request context
+			r = accesslog.WithUserName(r, username)
+
 			if authConfig.HeaderField != "" {
 				r.Header[authConfig.HeaderField] = []string{username}
+			}
+			if authConfig.Basic.RemoveHeader {
+				log.Debugf("Remove the Authorization header from the Basic auth")
+				r.Header.Del(authorizationHeader)
 			}
 			next.ServeHTTP(w, r)
 		}
@@ -111,7 +134,7 @@ func getLinesFromFile(filename string) ([]string, error) {
 	var filteredLines []string
 	for _, rawLine := range rawLines {
 		line := strings.TrimSpace(rawLine)
-		if line != "" {
+		if line != "" && !strings.HasPrefix(line, "#") {
 			filteredLines = append(filteredLines, line)
 		}
 	}

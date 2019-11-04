@@ -75,7 +75,11 @@ func (p *Provider) watchKv(configurationChan chan<- types.ConfigMessage, prefix 
 				if !ok {
 					return errors.New("watchtree channel closed")
 				}
-				configuration := p.buildConfiguration()
+				configuration, errC := p.buildConfiguration()
+				if errC != nil {
+					return errC
+				}
+
 				if configuration != nil {
 					configurationChan <- types.ConfigMessage{
 						ProviderName:  string(p.storeType),
@@ -97,8 +101,7 @@ func (p *Provider) watchKv(configurationChan chan<- types.ConfigMessage, prefix 
 }
 
 // Provide provides the configuration to traefik via the configuration channel
-func (p *Provider) Provide(configurationChan chan<- types.ConfigMessage, pool *safe.Pool, constraints types.Constraints) error {
-	p.Constraints = append(p.Constraints, constraints...)
+func (p *Provider) Provide(configurationChan chan<- types.ConfigMessage, pool *safe.Pool) error {
 	operation := func() error {
 		if _, err := p.kvClient.Exists(p.Prefix+"/qmslkjdfmqlskdjfmqlksjazçueznbvbwzlkajzebvkwjdcqmlsfj", nil); err != nil {
 			return fmt.Errorf("failed to test KV store connection: %v", err)
@@ -111,7 +114,11 @@ func (p *Provider) Provide(configurationChan chan<- types.ConfigMessage, pool *s
 				}
 			})
 		}
-		configuration := p.buildConfiguration()
+		configuration, err := p.buildConfiguration()
+		if err != nil {
+			return err
+		}
+
 		configurationChan <- types.ConfigMessage{
 			ProviderName:  string(p.storeType),
 			Configuration: configuration,

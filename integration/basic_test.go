@@ -28,7 +28,7 @@ func (s *SimpleSuite) TestInvalidConfigShouldFail(c *check.C) {
 		actual := output.String()
 
 		if !strings.Contains(actual, expected) {
-			return fmt.Errorf("Got %s, wanted %s", actual, expected)
+			return fmt.Errorf("got %s, wanted %s", actual, expected)
 		}
 
 		return nil
@@ -72,7 +72,7 @@ func (s *SimpleSuite) TestDefaultEntryPoints(c *check.C) {
 		actual := output.String()
 
 		if !strings.Contains(actual, expected) {
-			return fmt.Errorf("Got %s, wanted %s", actual, expected)
+			return fmt.Errorf("got %s, wanted %s", actual, expected)
 		}
 
 		return nil
@@ -93,10 +93,10 @@ func (s *SimpleSuite) TestPrintHelp(c *check.C) {
 		actual := output.String()
 
 		if strings.Contains(actual, notExpected) {
-			return fmt.Errorf("Got %s", actual)
+			return fmt.Errorf("got %s", actual)
 		}
 		if !strings.Contains(actual, expected) {
-			return fmt.Errorf("Got %s, wanted %s", actual, expected)
+			return fmt.Errorf("got %s, wanted %s", actual, expected)
 		}
 
 		return nil
@@ -395,4 +395,52 @@ func (s *SimpleSuite) TestMultipleProviderSameBackendName(c *check.C) {
 	err = try.GetRequest("http://127.0.0.1:8000/file", 1*time.Second, try.BodyContains(ipWhoami02))
 	c.Assert(err, checker.IsNil)
 
+}
+
+func (s *SimpleSuite) TestDontKeepTrailingSlash(c *check.C) {
+	file := s.adaptFile(c, "fixtures/keep_trailing_slash.toml", struct {
+		KeepTrailingSlash bool
+	}{false})
+	defer os.Remove(file)
+
+	cmd, output := s.traefikCmd(withConfigFile(file))
+	defer output(c)
+
+	err := cmd.Start()
+	c.Assert(err, checker.IsNil)
+	defer cmd.Process.Kill()
+
+	oldCheckRedirect := http.DefaultClient.CheckRedirect
+	http.DefaultClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+
+	err = try.GetRequest("http://127.0.0.1:8000/test/foo/", 1*time.Second, try.StatusCodeIs(http.StatusMovedPermanently))
+	c.Assert(err, checker.IsNil)
+
+	http.DefaultClient.CheckRedirect = oldCheckRedirect
+}
+
+func (s *SimpleSuite) TestKeepTrailingSlash(c *check.C) {
+	file := s.adaptFile(c, "fixtures/keep_trailing_slash.toml", struct {
+		KeepTrailingSlash bool
+	}{true})
+	defer os.Remove(file)
+
+	cmd, output := s.traefikCmd(withConfigFile(file))
+	defer output(c)
+
+	err := cmd.Start()
+	c.Assert(err, checker.IsNil)
+	defer cmd.Process.Kill()
+
+	oldCheckRedirect := http.DefaultClient.CheckRedirect
+	http.DefaultClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+
+	err = try.GetRequest("http://127.0.0.1:8000/test/foo/", 1*time.Second, try.StatusCodeIs(http.StatusNotFound))
+	c.Assert(err, checker.IsNil)
+
+	http.DefaultClient.CheckRedirect = oldCheckRedirect
 }

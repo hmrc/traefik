@@ -93,6 +93,13 @@ func circuitBreaker(exp string) func(*types.Backend) {
 	}
 }
 
+func responseForwarding(interval string) func(*types.Backend) {
+	return func(b *types.Backend) {
+		b.ResponseForwarding = &types.ResponseForwarding{}
+		b.ResponseForwarding.FlushInterval = interval
+	}
+}
+
 func buffering(opts ...func(*types.Buffering)) func(*types.Backend) {
 	return func(b *types.Backend) {
 		if b.Buffering == nil {
@@ -180,11 +187,22 @@ func frontend(backend string, opts ...func(*types.Frontend)) func(*types.Fronten
 		for _, opt := range opts {
 			opt(f)
 		}
+		// related the function frontendName
+		name := f.Backend
 		f.Backend = backend
+		if len(name) > 0 {
+			return name
+		}
 		return backend
 	}
 }
 
+func frontendName(name string) func(*types.Frontend) {
+	return func(f *types.Frontend) {
+		// store temporary the frontend name into the backend name
+		f.Backend = name
+	}
+}
 func passHostHeader() func(*types.Frontend) {
 	return func(f *types.Frontend) {
 		f.PassHostHeader = true
@@ -197,9 +215,68 @@ func entryPoints(eps ...string) func(*types.Frontend) {
 	}
 }
 
-func basicAuth(auth ...string) func(*types.Frontend) {
+// Deprecated
+func basicAuthDeprecated(auth ...string) func(*types.Frontend) {
 	return func(f *types.Frontend) {
-		f.BasicAuth = auth
+		f.Auth = &types.Auth{Basic: &types.Basic{Users: auth}}
+	}
+}
+
+func auth(opt func(*types.Auth)) func(*types.Frontend) {
+	return func(f *types.Frontend) {
+		auth := &types.Auth{}
+		opt(auth)
+		f.Auth = auth
+	}
+}
+
+func basicAuth(opts ...func(*types.Basic)) func(*types.Auth) {
+	return func(a *types.Auth) {
+		basic := &types.Basic{}
+		for _, opt := range opts {
+			opt(basic)
+		}
+		a.Basic = basic
+	}
+}
+
+func baUsers(users ...string) func(*types.Basic) {
+	return func(b *types.Basic) {
+		b.Users = users
+	}
+}
+
+func baRemoveHeaders() func(*types.Basic) {
+	return func(b *types.Basic) {
+		b.RemoveHeader = true
+	}
+}
+
+func forwardAuth(forwardURL string, opts ...func(*types.Forward)) func(*types.Auth) {
+	return func(a *types.Auth) {
+		fwd := &types.Forward{Address: forwardURL}
+		for _, opt := range opts {
+			opt(fwd)
+		}
+		a.Forward = fwd
+	}
+}
+
+func fwdAuthResponseHeaders(headers ...string) func(*types.Forward) {
+	return func(f *types.Forward) {
+		f.AuthResponseHeaders = headers
+	}
+}
+
+func fwdTrustForwardHeader() func(*types.Forward) {
+	return func(f *types.Forward) {
+		f.TrustForwardHeader = true
+	}
+}
+
+func fwdAuthTLS(cert, key string, insecure bool) func(*types.Forward) {
+	return func(f *types.Forward) {
+		f.TLS = &types.ClientTLS{Cert: cert, Key: key, InsecureSkipVerify: insecure}
 	}
 }
 
@@ -328,9 +405,41 @@ func limitPeriod(period time.Duration) func(*types.Rate) {
 	}
 }
 
+// Deprecated
 func passTLSCert() func(*types.Frontend) {
 	return func(f *types.Frontend) {
 		f.PassTLSCert = true
+	}
+}
+
+func passTLSClientCert() func(*types.Frontend) {
+	return func(f *types.Frontend) {
+		f.PassTLSClientCert = &types.TLSClientHeaders{
+			PEM: true,
+			Infos: &types.TLSClientCertificateInfos{
+				NotAfter:  true,
+				NotBefore: true,
+				Subject: &types.TLSCLientCertificateDNInfos{
+					CommonName:      true,
+					Country:         true,
+					DomainComponent: true,
+					Locality:        true,
+					Organization:    true,
+					Province:        true,
+					SerialNumber:    true,
+				},
+				Issuer: &types.TLSCLientCertificateDNInfos{
+					CommonName:      true,
+					Country:         true,
+					DomainComponent: true,
+					Locality:        true,
+					Organization:    true,
+					Province:        true,
+					SerialNumber:    true,
+				},
+				Sans: true,
+			},
+		}
 	}
 }
 

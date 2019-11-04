@@ -3,6 +3,7 @@ package accesslog
 import (
 	"context"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -12,6 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/containous/flaeg/parse"
 	"github.com/containous/traefik/log"
 	"github.com/containous/traefik/types"
 	"github.com/sirupsen/logrus"
@@ -31,18 +33,39 @@ const (
 	JSONFormat = "json"
 )
 
+type noopCloser struct {
+	*os.File
+}
+
+func (n noopCloser) Write(p []byte) (int, error) {
+	return n.File.Write(p)
+}
+
+func (n noopCloser) Close() error {
+	// noop
+	return nil
+}
+
+type logHandlerParams struct {
+	logDataTable *LogData
+	crr          *captureRequestReader
+	crw          *captureResponseWriter
+}
+
 // LogHandler will write each request and its response to the access log.
 type LogHandler struct {
 	config         *types.AccessLog
 	logger         *logrus.Logger
-	file           *os.File
+	file           io.WriteCloser
 	mu             sync.Mutex
 	httpCodeRanges types.HTTPCodeRanges
+	logHandlerChan chan logHandlerParams
+	wg             sync.WaitGroup
 }
 
 // NewLogHandler creates a new LogHandler
 func NewLogHandler(config *types.AccessLog) (*LogHandler, error) {
-	file := os.Stdout
+	var file io.WriteCloser = noopCloser{os.Stdout}
 	if len(config.FilePath) > 0 {
 		f, err := openAccessLogFile(config.FilePath)
 		if err != nil {
@@ -50,6 +73,7 @@ func NewLogHandler(config *types.AccessLog) (*LogHandler, error) {
 		}
 		file = f
 	}
+	logHandlerChan := make(chan logHandlerParams, config.BufferingSize)
 
 	var formatter logrus.Formatter
 
@@ -70,9 +94,10 @@ func NewLogHandler(config *types.AccessLog) (*LogHandler, error) {
 	}
 
 	logHandler := &LogHandler{
-		config: config,
-		logger: logger,
-		file:   file,
+		config:         config,
+		logger:         logger,
+		file:           file,
+		logHandlerChan: logHandlerChan,
 	}
 
 	if config.Filters != nil {
@@ -81,6 +106,16 @@ func NewLogHandler(config *types.AccessLog) (*LogHandler, error) {
 		} else {
 			logHandler.httpCodeRanges = httpCodeRanges
 		}
+	}
+
+	if config.BufferingSize > 0 {
+		logHandler.wg.Add(1)
+		go func() {
+			defer logHandler.wg.Done()
+			for handlerParams := range logHandler.logHandlerChan {
+				logHandler.logTheRoundTrip(handlerParams.logDataTable, handlerParams.crr, handlerParams.crw)
+			}
+		}()
 	}
 
 	return logHandler, nil
@@ -159,28 +194,40 @@ func (l *LogHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request, next h
 
 	next.ServeHTTP(crw, reqWithDataTable)
 
-	core[ClientUsername] = usernameIfPresent(reqWithDataTable.URL)
+	core[ClientUsername] = formatUsernameForLog(core[ClientUsername])
 
 	logDataTable.DownstreamResponse = crw.Header()
-	l.logTheRoundTrip(logDataTable, crr, crw)
+
+	if l.config.BufferingSize > 0 {
+		l.logHandlerChan <- logHandlerParams{
+			logDataTable: logDataTable,
+			crr:          crr,
+			crw:          crw,
+		}
+	} else {
+		l.logTheRoundTrip(logDataTable, crr, crw)
+	}
 }
 
-// Close closes the Logger (i.e. the file etc).
+// Close closes the Logger (i.e. the file, drain logHandlerChan, etc).
 func (l *LogHandler) Close() error {
+	close(l.logHandlerChan)
+	l.wg.Wait()
 	return l.file.Close()
 }
 
 // Rotate closes and reopens the log file to allow for rotation
 // by an external source.
 func (l *LogHandler) Rotate() error {
-	var err error
-
-	if l.file != nil {
-		defer func(f *os.File) {
-			f.Close()
-		}(l.file)
+	if l.config.FilePath == "" {
+		return nil
 	}
 
+	if l.file != nil {
+		defer func(f io.Closer) { _ = f.Close() }(l.file)
+	}
+
+	var err error
 	l.file, err = os.OpenFile(l.config.FilePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0664)
 	if err != nil {
 		return err
@@ -199,14 +246,12 @@ func silentSplitHostPort(value string) (host string, port string) {
 	return host, port
 }
 
-func usernameIfPresent(theURL *url.URL) string {
-	username := "-"
-	if theURL.User != nil {
-		if name := theURL.User.Username(); name != "" {
-			username = name
-		}
+func formatUsernameForLog(usernameField interface{}) string {
+	username, ok := usernameField.(string)
+	if ok && len(username) != 0 {
+		return username
 	}
-	return username
+	return "-"
 }
 
 // Logging handler to log frontend name, backend name, and elapsed time
@@ -225,7 +270,11 @@ func (l *LogHandler) logTheRoundTrip(logDataTable *LogData, crr *captureRequestR
 
 	core[DownstreamStatus] = crw.Status()
 
-	if l.keepAccessLog(crw.Status(), retryAttempts) {
+	// n.b. take care to perform time arithmetic using UTC to avoid errors at DST boundaries
+	totalDuration := time.Now().UTC().Sub(core[StartUTC].(time.Time))
+	core[Duration] = totalDuration
+
+	if l.keepAccessLog(crw.Status(), retryAttempts, totalDuration) {
 		core[DownstreamStatusLine] = fmt.Sprintf("%03d %s", crw.Status(), http.StatusText(crw.Status()))
 		core[DownstreamContentSize] = crw.Size()
 		if original, ok := core[OriginContentSize]; ok {
@@ -235,12 +284,9 @@ func (l *LogHandler) logTheRoundTrip(logDataTable *LogData, crr *captureRequestR
 			}
 		}
 
-		// n.b. take care to perform time arithmetic using UTC to avoid errors at DST boundaries
-		total := time.Now().UTC().Sub(core[StartUTC].(time.Time))
-		core[Duration] = total
-		core[Overhead] = total
+		core[Overhead] = totalDuration
 		if origin, ok := core[OriginDuration]; ok {
-			core[Overhead] = total - origin.(time.Duration)
+			core[Overhead] = totalDuration - origin.(time.Duration)
 		}
 
 		fields := logrus.Fields{}
@@ -272,13 +318,13 @@ func (l *LogHandler) redactHeaders(headers http.Header, fields logrus.Fields, pr
 	}
 }
 
-func (l *LogHandler) keepAccessLog(statusCode, retryAttempts int) bool {
+func (l *LogHandler) keepAccessLog(statusCode, retryAttempts int, duration time.Duration) bool {
 	if l.config.Filters == nil {
 		// no filters were specified
 		return true
 	}
 
-	if len(l.httpCodeRanges) == 0 && !l.config.Filters.RetryAttempts {
+	if len(l.httpCodeRanges) == 0 && !l.config.Filters.RetryAttempts && l.config.Filters.MinDuration == 0 {
 		// empty filters were specified, e.g. by passing --accessLog.filters only (without other filter options)
 		return true
 	}
@@ -288,6 +334,10 @@ func (l *LogHandler) keepAccessLog(statusCode, retryAttempts int) bool {
 	}
 
 	if l.config.Filters.RetryAttempts && retryAttempts > 0 {
+		return true
+	}
+
+	if l.config.Filters.MinDuration > 0 && (parse.Duration(duration) > l.config.Filters.MinDuration) {
 		return true
 	}
 

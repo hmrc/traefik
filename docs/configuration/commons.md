@@ -33,6 +33,13 @@
 #
 # checkNewVersion = false
 
+# Tells traefik whether it should keep the trailing slashes in the paths (e.g. /paths/) or redirect to the no trailing slash paths instead (/paths).
+#
+# Optional
+# Default: false
+#
+# keepTrailingSlash = false
+
 # Providers throttle duration.
 #
 # Optional
@@ -103,12 +110,31 @@ If you encounter 'too many open files' errors, you can either increase this valu
 - `defaultEntryPoints`: Entrypoints to be used by frontends that do not specify any entrypoint.  
 Each frontend can specify its own entrypoints.
 
+- `keepTrailingSlash`: Tells Træfik whether it should keep the trailing slashes that might be present in the paths of incoming requests (true), or if it should redirect to the slashless version of the URL (default behavior: false) 
+
+!!! note 
+    Beware that the value of `keepTrailingSlash` can have a significant impact on the way your frontend rules are interpreted.
+    The table below tries to sum up several behaviors depending on requests/configurations. 
+    The current default behavior is deprecated and kept for compatibility reasons. 
+    As a consequence, we encourage you to set `keepTrailingSlash` to true.
+    
+    | Incoming request     | keepTrailingSlash | Path:{value} | Behavior                              
+    |----------------------|-------------------|--------------|----------------------------|
+    | http://foo.com/path/ | false             | Path:/path/  | Proceeds with the request  |
+    | http://foo.com/path/ | false             | Path:/path   | 301 to http://foo.com/path |           
+    | http://foo.com/path  | false             | Path:/path/  | Proceeds with the request  |
+    | http://foo.com/path  | false             | Path:/path   | Proceeds with the request  |
+    | http://foo.com/path/ | true              | Path:/path/  | Proceeds with the request  |
+    | http://foo.com/path/ | true              | Path:/path   | 404                        |
+    | http://foo.com/path  | true              | Path:/path/  | 404                        |
+    | http://foo.com/path  | true              | Path:/path   | Proceeds with the request  |
+
 
 ## Constraints
 
-In a micro-service architecture, with a central service discovery, setting constraints limits Træfik scope to a smaller number of routes.
+In a micro-service architecture, with a central service discovery, setting constraints limits Traefik scope to a smaller number of routes.
 
-Træfik filters services according to service attributes/tags set in your providers.
+Traefik filters services according to service attributes/tags set in your providers.
 
 Supported filters:
 
@@ -144,6 +170,7 @@ Supported Providers:
 - Consul K/V
 - BoltDB
 - Zookeeper
+- ECS
 - Etcd
 - Consul Catalog
 - Rancher
@@ -222,13 +249,18 @@ Multiple sets of rates can be added to each frontend, but the time periods must 
 ```
 
 In the above example, frontend1 is configured to limit requests by the client's ip address.  
-An average of 5 requests every 3 seconds is allowed and an average of 100 requests every 10 seconds.  
-These can "burst" up to 10 and 200 in each period respectively.
+An average of 100 requests every 10 seconds is allowed and an average of 5 requests every 3 seconds.  
+These can "burst" up to 200 and 10 in each period respectively. 
+
+Valid values for `extractorfunc` are:
+  * `client.ip`
+  * `request.host`
+  * `request.header.<header name>`
 
 ## Buffering
 
 In some cases request/buffering can be enabled for a specific backend.
-By enabling this, Træfik will read the entire request into memory (possibly buffering large requests into disk) and will reject requests that are over a specified limit.
+By enabling this, Traefik will read the entire request into memory (possibly buffering large requests into disk) and will reject requests that are over a specified limit.
 This may help services deal with large data (multipart/form-data for example) more efficiently and should minimise time spent when sending data to a backend server.
 
 For more information please check [oxy/buffer](http://godoc.org/github.com/vulcand/oxy/buffer) documentation.
@@ -415,6 +447,38 @@ If no units are provided, the value is parsed assuming seconds.
 idleTimeout = "360s"
 ```
 
+## Host Resolver
+
+`hostResolver` are used for request host matching process.
+
+```toml
+[hostResolver]
+
+# cnameFlattening is a trigger to flatten request host, assuming it is a CNAME record
+#
+# Optional
+# Default : false
+#
+cnameFlattening = true
+
+# resolvConf is dns resolving configuration file, the default is /etc/resolv.conf
+#
+# Optional
+# Default : "/etc/resolv.conf"
+#
+# resolvConf = "/etc/resolv.conf"
+
+# resolvDepth is the maximum CNAME recursive lookup
+#
+# Optional
+# Default : 5
+#
+# resolvDepth = 5
+```
+
+- To allow serving secure https request and generate the SSL using ACME while `cnameFlattening` is active. 
+The `acme` configuration for `HTTP-01` challenge and `onDemand` is mandatory. 
+Refer to [ACME configuration](/configuration/acme) for more information.
 
 ## Override Default Configuration Template
 
@@ -468,4 +532,41 @@ Example:
   [frontends.{{$frontend}}]
   backend = "{{$backend}}"
 {{end}}
+```
+
+## Pass TLS Client Cert
+
+```toml
+# Pass the escaped client cert infos selected below in a `X-Forwarded-Ssl-Client-Cert-Infos` header.
+[frontends.frontend1.passTLSClientCert]
+        pem = true
+        [frontends.frontend1.passTLSClientCert.infos]
+            notBefore = true
+            notAfter = true
+            [frontends.frontend1.passTLSClientCert.infos.subject]
+                country = true
+                domainComponent = true
+                province = true
+                locality = true
+                organization = true
+                commonName = true
+                serialNumber = true
+            [frontends.frontend1.passTLSClientCert.infos.issuer]
+                country = true
+                domainComponent = true
+                province = true
+                locality = true
+                organization = true
+                commonName = true
+                serialNumber = true
+```
+
+Pass TLS Client Cert `pem` defines if the escaped pem is added to a `X-Forwarded-Ssl-Client-Cert` header.  
+Pass TLS Client Cert `infos` defines how the certificate data are added to a `X-Forwarded-Ssl-Client-Cert-Infos` header.  
+
+The following example shows an unescaped result that uses all the available fields:
+If there are more than one certificate, they are separated by a `;`
+
+```
+Subject="DC=org,DC=cheese,C=FR,C=US,ST=Cheese org state,ST=Cheese com state,L=TOULOUSE,L=LYON,O=Cheese,O=Cheese 2,CN=*.cheese.com",Issuer="DC=org,DC=cheese,C=FR,C=US,ST=Signing State,ST=Signing State 2,L=TOULOUSE,L=LYON,O=Cheese,O=Cheese 2,CN=Simple Signing CA 2",NB=1544094616,NA=1607166616,SAN=*.cheese.org,*.cheese.net,*.cheese.com,test@cheese.org,test@cheese.net,10.0.1.0,10.0.1.2
 ```

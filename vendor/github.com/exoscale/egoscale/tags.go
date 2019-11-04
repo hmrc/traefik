@@ -1,89 +1,80 @@
 package egoscale
 
-// Taggable represents a resource which can have tags attached
-//
-// This is a helper to fill the resourcetype of a CreateTags call
-type Taggable interface {
-	// CloudStack resource type of the Taggable type
-	ResourceType() string
-}
-
 // ResourceTag is a tag associated with a resource
 //
-// http://docs.cloudstack.apache.org/projects/cloudstack-administration/en/4.9/management.html
+// https://community.exoscale.com/documentation/compute/instance-tags/
 type ResourceTag struct {
-	Account      string `json:"account,omitempty"`
-	Customer     string `json:"customer,omitempty"`
-	Domain       string `json:"domain,omitempty"`
-	DomainID     string `json:"domainid,omitempty"`
-	Key          string `json:"key"`
-	Project      string `json:"project,omitempty"`
-	ProjectID    string `json:"projectid,omitempty"`
-	ResourceID   string `json:"resourceid,omitempty"`
-	ResourceType string `json:"resourcetype,omitempty"`
-	Value        string `json:"value"`
+	Account      string `json:"account,omitempty" doc:"the account associated with the tag"`
+	Customer     string `json:"customer,omitempty" doc:"customer associated with the tag"`
+	Key          string `json:"key,omitempty" doc:"tag key name"`
+	ResourceID   *UUID  `json:"resourceid,omitempty" doc:"id of the resource"`
+	ResourceType string `json:"resourcetype,omitempty" doc:"resource type"`
+	Value        string `json:"value,omitempty" doc:"tag value"`
+}
+
+// ListRequest builds the ListZones request
+func (tag ResourceTag) ListRequest() (ListCommand, error) {
+	req := &ListTags{
+		Customer:     tag.Customer,
+		Key:          tag.Key,
+		ResourceID:   tag.ResourceID,
+		ResourceType: tag.ResourceType,
+		Value:        tag.Value,
+	}
+
+	return req, nil
 }
 
 // CreateTags (Async) creates resource tag(s)
-//
-// CloudStack API: http://cloudstack.apache.org/api/apidocs-4.10/apis/createTags.html
 type CreateTags struct {
-	ResourceIDs  []string      `json:"resourceids"`
-	ResourceType string        `json:"resourcetype"`
-	Tags         []ResourceTag `json:"tags"`
-	Customer     string        `json:"customer,omitempty"`
+	ResourceIDs  []UUID        `json:"resourceids" doc:"list of resources to create the tags for"`
+	ResourceType string        `json:"resourcetype" doc:"type of the resource"`
+	Tags         []ResourceTag `json:"tags" doc:"Map of tags (key/value pairs)"`
+	Customer     string        `json:"customer,omitempty" doc:"identifies client specific tag. When the value is not null, the tag can't be used by cloudStack code internally"`
+	_            bool          `name:"createTags" description:"Creates resource tag(s)"`
 }
 
-func (*CreateTags) name() string {
-	return "createTags"
+// Response returns the struct to unmarshal
+func (CreateTags) Response() interface{} {
+	return new(AsyncJobResult)
 }
 
-func (*CreateTags) asyncResponse() interface{} {
-	return new(booleanAsyncResponse)
+// AsyncResponse returns the struct to unmarshal the async job
+func (CreateTags) AsyncResponse() interface{} {
+	return new(BooleanResponse)
 }
 
 // DeleteTags (Async) deletes the resource tag(s)
-//
-// CloudStack API: http://cloudstack.apache.org/api/apidocs-4.10/apis/deleteTags.html
 type DeleteTags struct {
-	ResourceIDs  []string      `json:"resourceids"`
-	ResourceType string        `json:"resourcetype"`
-	Tags         []ResourceTag `json:"tags,omitempty"`
+	ResourceIDs  []UUID        `json:"resourceids" doc:"Delete tags for resource id(s)"`
+	ResourceType string        `json:"resourcetype" doc:"Delete tag by resource type"`
+	Tags         []ResourceTag `json:"tags,omitempty" doc:"Delete tags matching key/value pairs"`
+	_            bool          `name:"deleteTags" description:"Deleting resource tag(s)"`
 }
 
-func (*DeleteTags) name() string {
-	return "deleteTags"
+// Response returns the struct to unmarshal
+func (DeleteTags) Response() interface{} {
+	return new(AsyncJobResult)
 }
 
-func (*DeleteTags) asyncResponse() interface{} {
-	return new(booleanAsyncResponse)
+// AsyncResponse returns the struct to unmarshal the async job
+func (DeleteTags) AsyncResponse() interface{} {
+	return new(BooleanResponse)
 }
+
+//go:generate go run generate/main.go -interface=Listable ListTags
 
 // ListTags list resource tag(s)
-//
-// CloudStack API: http://cloudstack.apache.org/api/apidocs-4.10/apis/listTags.html
 type ListTags struct {
-	Account      string `json:"account,omitempty"`
-	Customer     string `json:"customer,omitempty"`
-	DomainID     string `json:"domainid,omitempty"`
-	IsRecursive  bool   `json:"isrecursive,omitempty"`
-	Key          string `json:"key,omitempty"`
-	Keyword      string `json:"keyword,omitempty"`
-	ListAll      bool   `json:"listall,omitempty"`
+	Customer     string `json:"customer,omitempty" doc:"list by customer name"`
+	Key          string `json:"key,omitempty" doc:"list by key"`
+	Keyword      string `json:"keyword,omitempty" doc:"List by keyword"`
 	Page         int    `json:"page,omitempty"`
 	PageSize     int    `json:"pagesize,omitempty"`
-	ProjectID    string `json:"projectid,omitempty"`
-	ResourceID   string `json:"resourceid,omitempty"`
-	ResourceType string `json:"resourcetype,omitempty"`
-	Value        string `json:"value,omitempty"`
-}
-
-func (*ListTags) name() string {
-	return "listTags"
-}
-
-func (*ListTags) response() interface{} {
-	return new(ListTagsResponse)
+	ResourceID   *UUID  `json:"resourceid,omitempty" doc:"list by resource id"`
+	ResourceType string `json:"resourcetype,omitempty" doc:"list by resource type"`
+	Value        string `json:"value,omitempty" doc:"list by value"`
+	_            bool   `name:"listTags" description:"List resource tag(s)"`
 }
 
 // ListTagsResponse represents a list of resource tags

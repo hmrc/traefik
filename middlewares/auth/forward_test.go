@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/negroni"
+	"github.com/vulcand/oxy/forward"
 )
 
 func TestForwardAuthFail(t *testing.T) {
@@ -36,9 +37,8 @@ func TestForwardAuthFail(t *testing.T) {
 	ts := httptest.NewServer(n)
 	defer ts.Close()
 
-	client := &http.Client{}
 	req := testhelpers.MustNewRequest(http.MethodGet, ts.URL, nil)
-	res, err := client.Do(req)
+	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err, "there should be no error")
 	assert.Equal(t, http.StatusForbidden, res.StatusCode, "they should be equal")
 
@@ -49,18 +49,26 @@ func TestForwardAuthFail(t *testing.T) {
 
 func TestForwardAuthSuccess(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Auth-User", "user@example.com")
+		w.Header().Add("X-Auth-Group", "group1")
+		w.Header().Add("X-Auth-Group", "group2")
+		w.Header().Set("X-Auth-Secret", "secret")
 		fmt.Fprintln(w, "Success")
 	}))
 	defer server.Close()
 
 	middleware, err := NewAuthenticator(&types.Auth{
 		Forward: &types.Forward{
-			Address: server.URL,
+			Address:             server.URL,
+			AuthResponseHeaders: []string{"X-Auth-User", "X-Auth-Group"},
 		},
 	}, &tracing.Tracing{})
 	assert.NoError(t, err, "there should be no error")
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "user@example.com", r.Header.Get("X-Auth-User"))
+		assert.Equal(t, []string{"group1", "group2"}, r.Header["X-Auth-Group"])
+		assert.Empty(t, r.Header.Get("X-Auth-Secret"))
 		fmt.Fprintln(w, "traefik")
 	})
 	n := negroni.New(middleware)
@@ -68,9 +76,9 @@ func TestForwardAuthSuccess(t *testing.T) {
 	ts := httptest.NewServer(n)
 	defer ts.Close()
 
-	client := &http.Client{}
 	req := testhelpers.MustNewRequest(http.MethodGet, ts.URL, nil)
-	res, err := client.Do(req)
+	req.Header.Set("X-Auth-Group", "admin_group")
+	res, err := http.DefaultClient.Do(req)
 	assert.NoError(t, err, "there should be no error")
 	assert.Equal(t, http.StatusOK, res.StatusCode, "they should be equal")
 
@@ -109,6 +117,59 @@ func TestForwardAuthRedirect(t *testing.T) {
 	res, err := client.Do(req)
 	assert.NoError(t, err, "there should be no error")
 	assert.Equal(t, http.StatusFound, res.StatusCode, "they should be equal")
+
+	location, err := res.Location()
+	assert.NoError(t, err, "there should be no error")
+	assert.Equal(t, "http://example.com/redirect-test", location.String(), "they should be equal")
+
+	body, err := ioutil.ReadAll(res.Body)
+	assert.NoError(t, err, "there should be no error")
+	assert.NotEmpty(t, string(body), "there should be something in the body")
+}
+
+func TestForwardAuthRemoveHopByHopHeaders(t *testing.T) {
+	authTs := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		headers := w.Header()
+		for _, header := range forward.HopHeaders {
+			if header == forward.TransferEncoding {
+				headers.Add(header, "identity")
+			} else {
+				headers.Add(header, "test")
+			}
+		}
+
+		http.Redirect(w, r, "http://example.com/redirect-test", http.StatusFound)
+	}))
+	defer authTs.Close()
+
+	authMiddleware, err := NewAuthenticator(&types.Auth{
+		Forward: &types.Forward{
+			Address: authTs.URL,
+		},
+	}, &tracing.Tracing{})
+	assert.NoError(t, err, "there should be no error")
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "traefik")
+	})
+	n := negroni.New(authMiddleware)
+	n.UseHandler(handler)
+	ts := httptest.NewServer(n)
+	defer ts.Close()
+
+	client := &http.Client{
+		CheckRedirect: func(r *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	req := testhelpers.MustNewRequest(http.MethodGet, ts.URL, nil)
+	res, err := client.Do(req)
+	assert.NoError(t, err, "there should be no error")
+	assert.Equal(t, http.StatusFound, res.StatusCode, "they should be equal")
+
+	for _, header := range forward.HopHeaders {
+		assert.Equal(t, "", res.Header.Get(header), "hop-by-hop header '%s' mustn't be set", header)
+	}
 
 	location, err := res.Location()
 	assert.NoError(t, err, "there should be no error")
@@ -174,11 +235,12 @@ func TestForwardAuthFailResponseHeaders(t *testing.T) {
 
 func Test_writeHeader(t *testing.T) {
 	testCases := []struct {
-		name               string
-		headers            map[string]string
-		trustForwardHeader bool
-		emptyHost          bool
-		expectedHeaders    map[string]string
+		name                      string
+		headers                   map[string]string
+		trustForwardHeader        bool
+		emptyHost                 bool
+		expectedHeaders           map[string]string
+		checkForUnexpectedHeaders bool
 	}{
 		{
 			name: "trust Forward Header",
@@ -257,6 +319,48 @@ func Test_writeHeader(t *testing.T) {
 				"X-Forwarded-Host": "foo.bar",
 				"X-Forwarded-Uri":  "/path?q=1",
 			},
+		}, {
+			name: "trust Forward Header with forwarded request Method",
+			headers: map[string]string{
+				"X-Forwarded-Method": "OPTIONS",
+			},
+			trustForwardHeader: true,
+			expectedHeaders: map[string]string{
+				"X-Forwarded-Method": "OPTIONS",
+			},
+		},
+		{
+			name: "not trust Forward Header with forward request Method",
+			headers: map[string]string{
+				"X-Forwarded-Method": "OPTIONS",
+			},
+			trustForwardHeader: false,
+			expectedHeaders: map[string]string{
+				"X-Forwarded-Method": "GET",
+			},
+		},
+		{
+			name: "remove hop-by-hop headers",
+			headers: map[string]string{
+				forward.Connection:         "Connection",
+				forward.KeepAlive:          "KeepAlive",
+				forward.ProxyAuthenticate:  "ProxyAuthenticate",
+				forward.ProxyAuthorization: "ProxyAuthorization",
+				forward.Te:                 "Te",
+				forward.Trailers:           "Trailers",
+				forward.TransferEncoding:   "TransferEncoding",
+				forward.Upgrade:            "Upgrade",
+				"X-CustomHeader":           "CustomHeader",
+			},
+			trustForwardHeader: false,
+			expectedHeaders: map[string]string{
+				"X-CustomHeader":     "CustomHeader",
+				"X-Forwarded-Proto":  "http",
+				"X-Forwarded-Host":   "foo.bar",
+				"X-Forwarded-Uri":    "/path?q=1",
+				"X-Forwarded-Method": "GET",
+			},
+			checkForUnexpectedHeaders: true,
 		},
 	}
 
@@ -276,8 +380,16 @@ func Test_writeHeader(t *testing.T) {
 
 			writeHeader(req, forwardReq, test.trustForwardHeader)
 
-			for key, value := range test.expectedHeaders {
-				assert.Equal(t, value, forwardReq.Header.Get(key))
+			actualHeaders := forwardReq.Header
+			expectedHeaders := test.expectedHeaders
+			for key, value := range expectedHeaders {
+				assert.Equal(t, value, actualHeaders.Get(key))
+				actualHeaders.Del(key)
+			}
+			if test.checkForUnexpectedHeaders {
+				for key := range actualHeaders {
+					assert.Fail(t, "Unexpected header found", key)
+				}
 			}
 		})
 	}

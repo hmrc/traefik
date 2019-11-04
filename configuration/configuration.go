@@ -6,12 +6,13 @@ import (
 	"time"
 
 	"github.com/containous/flaeg"
-	"github.com/containous/traefik-extra-service-fabric"
+	servicefabric "github.com/containous/traefik-extra-service-fabric"
 	"github.com/containous/traefik/acme"
 	"github.com/containous/traefik/api"
 	"github.com/containous/traefik/log"
 	atconf "github.com/containous/traefik/middlewares/audittap/configuration"
 	"github.com/containous/traefik/middlewares/tracing"
+	"github.com/containous/traefik/middlewares/tracing/datadog"
 	"github.com/containous/traefik/middlewares/tracing/jaeger"
 	"github.com/containous/traefik/middlewares/tracing/zipkin"
 	"github.com/containous/traefik/ping"
@@ -33,6 +34,9 @@ import (
 	"github.com/containous/traefik/provider/zk"
 	"github.com/containous/traefik/tls"
 	"github.com/containous/traefik/types"
+	"github.com/go-acme/lego/challenge/dns01"
+	"github.com/pkg/errors"
+	jaegercli "github.com/uber/jaeger-client-go"
 )
 
 const (
@@ -79,12 +83,13 @@ type GlobalConfiguration struct {
 	MaxIdleConnsPerHost       int                     `description:"If non-zero, controls the maximum idle (keep-alive) to keep per-host.  If zero, DefaultMaxIdleConnsPerHost is used" export:"true"`
 	IdleTimeout               flaeg.Duration          `description:"(Deprecated) maximum amount of time an idle (keep-alive) connection will remain idle before closing itself." export:"true"` // Deprecated
 	InsecureSkipVerify        bool                    `description:"Disable SSL certificate verification" export:"true"`
-	RootCAs                   tls.RootCAs             `description:"Add cert file for self-signed certificate"`
+	RootCAs                   tls.FilesOrContents     `description:"Add cert file for self-signed certificate"`
 	Retry                     *Retry                  `description:"Enable retry sending request if network error" export:"true"`
 	HealthCheck               *HealthCheckConfig      `description:"Health check parameters" export:"true"`
 	RespondingTimeouts        *RespondingTimeouts     `description:"Timeouts for incoming requests to the Traefik instance" export:"true"`
 	ForwardingTimeouts        *ForwardingTimeouts     `description:"Timeouts for requests forwarded to the backend servers" export:"true"`
 	AllowMinWeightZero        bool                    `description:"Allow weight to take 0 as minimum real value." export:"true"`         // Deprecated
+	KeepTrailingSlash         bool                    `description:"Do not remove trailing slash." export:"true"`                         // Deprecated
 	Web                       *WebCompatibility       `description:"(Deprecated) Enable Web backend with default settings" export:"true"` // Deprecated
 	Docker                    *docker.Provider        `description:"Enable Docker backend with default settings" export:"true"`
 	File                      *file.Provider          `description:"Enable File backend with default settings" export:"true"`
@@ -105,6 +110,7 @@ type GlobalConfiguration struct {
 	API                       *api.Handler            `description:"Enable api/dashboard" export:"true"`
 	Metrics                   *types.Metrics          `description:"Enable a metrics exporter" export:"true"`
 	Ping                      *ping.Handler           `description:"Enable ping" export:"true"`
+	HostResolver              *HostResolverConfig     `description:"Enable CNAME Flattening" export:"true"`
 	AuditSink                 *atconf.AuditSink       `description:"Audit Sink settings"`
 }
 
@@ -207,6 +213,17 @@ func (gc *GlobalConfiguration) SetEffectiveConfiguration(configFile string) {
 				entryPoint.WhitelistSourceRange = nil
 			}
 		}
+
+		// Thanks to SSLv3 being enabled by mistake in golang 1.12,
+		// If no minVersion is set, apply TLS1.0 as the minimum.
+		if entryPoint.TLS != nil && len(entryPoint.TLS.MinVersion) == 0 {
+			entryPoint.TLS.MinVersion = "VersionTLS10"
+		}
+
+		if entryPoint.TLS != nil && entryPoint.TLS.DefaultCertificate == nil && len(entryPoint.TLS.Certificates) > 0 {
+			log.Infof("No tls.defaultCertificate given for %s: using the first item in tls.certificates as a fallback.", entryPointName)
+			entryPoint.TLS.DefaultCertificate = &entryPoint.TLS.Certificates[0]
+		}
 	}
 
 	// Make sure LifeCycle isn't nil to spare nil checks elsewhere.
@@ -226,6 +243,10 @@ func (gc *GlobalConfiguration) SetEffectiveConfiguration(configFile string) {
 			gc.Docker.TemplateVersion = 1
 		} else {
 			gc.Docker.TemplateVersion = 2
+		}
+
+		if gc.Docker.SwarmModeRefreshSeconds <= 0 {
+			gc.Docker.SwarmModeRefreshSeconds = 15
 		}
 	}
 
@@ -323,15 +344,20 @@ func (gc *GlobalConfiguration) initTracing() {
 		case jaeger.Name:
 			if gc.Tracing.Jaeger == nil {
 				gc.Tracing.Jaeger = &jaeger.Config{
-					SamplingServerURL:  "http://localhost:5778/sampling",
-					SamplingType:       "const",
-					SamplingParam:      1.0,
-					LocalAgentHostPort: "127.0.0.1:6831",
+					SamplingServerURL:      "http://localhost:5778/sampling",
+					SamplingType:           "const",
+					SamplingParam:          1.0,
+					LocalAgentHostPort:     "127.0.0.1:6831",
+					TraceContextHeaderName: jaegercli.TraceContextHeaderName,
 				}
 			}
 			if gc.Tracing.Zipkin != nil {
 				log.Warn("Zipkin configuration will be ignored")
 				gc.Tracing.Zipkin = nil
+			}
+			if gc.Tracing.DataDog != nil {
+				log.Warn("DataDog configuration will be ignored")
+				gc.Tracing.DataDog = nil
 			}
 		case zipkin.Name:
 			if gc.Tracing.Zipkin == nil {
@@ -341,6 +367,27 @@ func (gc *GlobalConfiguration) initTracing() {
 					ID128Bit:     true,
 					Debug:        false,
 				}
+			}
+			if gc.Tracing.Jaeger != nil {
+				log.Warn("Jaeger configuration will be ignored")
+				gc.Tracing.Jaeger = nil
+			}
+			if gc.Tracing.DataDog != nil {
+				log.Warn("DataDog configuration will be ignored")
+				gc.Tracing.DataDog = nil
+			}
+		case datadog.Name:
+			if gc.Tracing.DataDog == nil {
+				gc.Tracing.DataDog = &datadog.Config{
+					LocalAgentHostPort: "localhost:8126",
+					GlobalTag:          "",
+					Debug:              false,
+					PrioritySampling:   false,
+				}
+			}
+			if gc.Tracing.Zipkin != nil {
+				log.Warn("Zipkin configuration will be ignored")
+				gc.Tracing.Zipkin = nil
 			}
 			if gc.Tracing.Jaeger != nil {
 				log.Warn("Jaeger configuration will be ignored")
@@ -362,6 +409,27 @@ func (gc *GlobalConfiguration) initACMEProvider() {
 			gc.ACME.HTTPChallenge = nil
 		}
 
+		if gc.ACME.DNSChallenge != nil && gc.ACME.TLSChallenge != nil {
+			log.Warn("Unable to use DNS challenge and TLS challenge at the same time. Fallback to DNS challenge.")
+			gc.ACME.TLSChallenge = nil
+		}
+
+		if gc.ACME.HTTPChallenge != nil && gc.ACME.TLSChallenge != nil {
+			log.Warn("Unable to use HTTP challenge and TLS challenge at the same time. Fallback to TLS challenge.")
+			gc.ACME.HTTPChallenge = nil
+		}
+
+		for _, domain := range gc.ACME.Domains {
+			if domain.Main != dns01.UnFqdn(domain.Main) {
+				log.Warnf("FQDN detected, please remove the trailing dot: %s", domain.Main)
+			}
+			for _, san := range domain.SANs {
+				if san != dns01.UnFqdn(san) {
+					log.Warnf("FQDN detected, please remove the trailing dot: %s", san)
+				}
+			}
+		}
+
 		// TODO: to remove in the future
 		if len(gc.ACME.StorageFile) > 0 && len(gc.ACME.Storage) == 0 {
 			log.Warn("ACME.StorageFile is deprecated, use ACME.Storage instead")
@@ -376,25 +444,44 @@ func (gc *GlobalConfiguration) initACMEProvider() {
 		if gc.ACME.OnDemand {
 			log.Warn("ACME.OnDemand is deprecated")
 		}
+	}
+}
 
+// InitACMEProvider create an acme provider from the ACME part of globalConfiguration
+func (gc *GlobalConfiguration) InitACMEProvider() (*acmeprovider.Provider, error) {
+	if gc.ACME != nil {
+		if len(gc.ACME.Storage) == 0 {
+			// Delete the ACME configuration to avoid starting ACME in cluster mode
+			gc.ACME = nil
+			return nil, errors.New("unable to initialize ACME provider with no storage location for the certificates")
+		}
 		// TODO: Remove when Provider ACME will replace totally ACME
 		// If provider file, use Provider ACME instead of ACME
 		if gc.Cluster == nil {
-			acmeprovider.Get().Configuration = &acmeprovider.Configuration{
+			provider := &acmeprovider.Provider{}
+			provider.Configuration = &acmeprovider.Configuration{
+				KeyType:       gc.ACME.KeyType,
 				OnHostRule:    gc.ACME.OnHostRule,
 				OnDemand:      gc.ACME.OnDemand,
 				Email:         gc.ACME.Email,
 				Storage:       gc.ACME.Storage,
 				HTTPChallenge: gc.ACME.HTTPChallenge,
 				DNSChallenge:  gc.ACME.DNSChallenge,
+				TLSChallenge:  gc.ACME.TLSChallenge,
 				Domains:       gc.ACME.Domains,
 				ACMELogging:   gc.ACME.ACMELogging,
 				CAServer:      gc.ACME.CAServer,
 				EntryPoint:    gc.ACME.EntryPoint,
 			}
+
+			store := acmeprovider.NewLocalStore(provider.Storage)
+			provider.Store = store
+			acme.ConvertToNewFormat(provider.Storage)
 			gc.ACME = nil
+			return provider, nil
 		}
 	}
+	return nil, nil
 }
 
 func getSafeACMECAServer(caServerSrc string) string {
@@ -425,14 +512,6 @@ func (gc *GlobalConfiguration) ValidateConfiguration() {
 		} else {
 			if gc.EntryPoints[gc.ACME.EntryPoint].TLS == nil {
 				log.Fatalf("Entrypoint %q has no TLS configuration for ACME configuration", gc.ACME.EntryPoint)
-			}
-		}
-	} else if acmeprovider.IsEnabled() {
-		if _, ok := gc.EntryPoints[acmeprovider.Get().EntryPoint]; !ok {
-			log.Fatalf("Unknown entrypoint %q for provider ACME configuration", acmeprovider.Get().EntryPoint)
-		} else {
-			if gc.EntryPoints[acmeprovider.Get().EntryPoint].TLS == nil {
-				log.Fatalf("Entrypoint %q has no TLS configuration for provider ACME configuration", acmeprovider.Get().EntryPoint)
 			}
 		}
 	}
@@ -504,4 +583,11 @@ type ForwardingTimeouts struct {
 type LifeCycle struct {
 	RequestAcceptGraceTimeout flaeg.Duration `description:"Duration to keep accepting requests before Traefik initiates the graceful shutdown procedure"`
 	GraceTimeOut              flaeg.Duration `description:"Duration to give active requests a chance to finish before Traefik stops"`
+}
+
+// HostResolverConfig contain configuration for CNAME Flattening
+type HostResolverConfig struct {
+	CnameFlattening bool   `description:"A flag to enable/disable CNAME flattening" export:"true"`
+	ResolvConfig    string `description:"resolv.conf used for DNS resolving" export:"true"`
+	ResolvDepth     int    `description:"The maximal depth of DNS recursive resolving" export:"true"`
 }

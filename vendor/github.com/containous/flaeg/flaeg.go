@@ -396,6 +396,7 @@ type Command struct {
 	DefaultPointersConfig interface{} // TODO: case DefaultPointersConfig is nil
 	Run                   func() error
 	Metadata              map[string]string
+	HideHelp              bool
 }
 
 // LoadWithCommand initializes config : struct fields given by reference, with args : arguments.
@@ -433,17 +434,25 @@ func LoadWithCommand(cmd *Command, cmdArgs []string, customParsers map[reflect.T
 
 // PrintHelpWithCommand generates and prints command line help for a Command
 func PrintHelpWithCommand(flagMap map[string]reflect.StructField, defaultValMap map[string]reflect.Value, parsers map[reflect.Type]parse.Parser, cmd *Command, subCmd []*Command) error {
+	// Hide command from help
+	if cmd != nil && cmd.HideHelp {
+		return fmt.Errorf("command %s not found", cmd.Name)
+	}
+
 	// Define a templates
 	// Using POSXE STD : http://pubs.opengroup.org/onlinepubs/9699919799/
 	const helper = `{{if .ProgDescription}}{{.ProgDescription}}
 
-{{end}}Usage: {{.ProgName}} [--flag=flag_argument] [-f[flag_argument]] ...     set flag_argument to flag(s)
-   or: {{.ProgName}} [--flag[=true|false| ]] [-f[true|false| ]] ...     set true/false to boolean flag(s)
+{{end}}Usage: {{.ProgName}} [flags] <command> [<arguments>]
+
+Use "{{.ProgName}} <command> --help" for help on any command.
 {{if .SubCommands}}
-Available Commands:{{range $subCmdName, $subCmdDesc := .SubCommands}}
+Commands:{{range $subCmdName, $subCmdDesc := .SubCommands}}
 {{printf "\t%-50s %s" $subCmdName $subCmdDesc}}{{end}}
-Use "{{.ProgName}} [command] --help" for more information about a command.
 {{end}}
+Flag's usage: {{.ProgName}} [--flag=flag_argument] [-f[flag_argument]] ...     set flag_argument to flag(s)
+          or: {{.ProgName}} [--flag[=true|false| ]] [-f[true|false| ]] ...     set true/false to boolean flag(s)
+
 Flags:
 `
 	// Use a struct to give data to template
@@ -459,7 +468,9 @@ Flags:
 		tempStruct.SubCommands = map[string]string{}
 		if len(subCmd) > 1 && cmd == subCmd[0] {
 			for _, c := range subCmd[1:] {
-				tempStruct.SubCommands[c.Name] = c.Description
+				if !c.HideHelp {
+					tempStruct.SubCommands[c.Name] = c.Description
+				}
 			}
 		}
 	} else {
@@ -528,7 +539,7 @@ func printFlagsDescriptionsDefaultValues(flagMap map[string]reflect.StructField,
 		}
 	}
 
-	//add help flag
+	// add help flag
 	shortFlagsWithDash = append(shortFlagsWithDash, "-h,")
 	flagsWithDash = append(flagsWithDash, "--help")
 	descriptions = append(descriptions, "Print Help (this message) and exit")
@@ -536,6 +547,7 @@ func printFlagsDescriptionsDefaultValues(flagMap map[string]reflect.StructField,
 
 	return displayTab(output, shortFlagsWithDash, flagsWithDash, descriptions, defaultValues)
 }
+
 func split(str string, width int) []string {
 	if len(str) > width {
 		index := strings.LastIndex(str[:width], " ")
@@ -575,7 +587,10 @@ func PrintErrorWithCommand(err error, flagMap map[string]reflect.StructField, de
 		fmt.Printf("Error here : %s\n", err)
 	}
 
-	PrintHelpWithCommand(flagMap, defaultValMap, parsers, cmd, subCmd)
+	if errHelp := PrintHelpWithCommand(flagMap, defaultValMap, parsers, cmd, subCmd); errHelp != nil {
+		return errHelp
+	}
+
 	return err
 }
 
@@ -584,7 +599,7 @@ func PrintErrorWithCommand(err error, flagMap map[string]reflect.StructField, de
 // a map of custom parsers could be use
 type Flaeg struct {
 	calledCommand *Command
-	commands      []*Command ///rootCommand is th fist one in this slice
+	commands      []*Command // rootCommand is th fist one in this slice
 	args          []string
 	commandArgs   []string
 	customParsers map[reflect.Type]parse.Parser

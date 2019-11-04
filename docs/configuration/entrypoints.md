@@ -5,6 +5,11 @@
 ### TOML
 
 ```toml
+defaultEntryPoints = ["http", "https"]
+
+# ...
+# ...
+
 [entryPoints]
   [entryPoints.http]
     address = ":80"
@@ -40,12 +45,14 @@
     [entryPoints.http.auth]
       headerField = "X-WebAuth-User"
       [entryPoints.http.auth.basic]
+        removeHeader = true
         users = [
           "test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/",
           "test2:$apr1$d9hr9HBB$4HxwgUir3HP4EsggP/QNo0",
         ]
         usersFile = "/path/to/.htpasswd"
       [entryPoints.http.auth.digest]
+        removeHeader = true
         users = [
           "test:traefik:a2688e031edb4be6a3797f3882655c05",
           "test2:traefik:518845800f9e2bfb1f1f740ec24f074e",
@@ -54,8 +61,9 @@
       [entryPoints.http.auth.forward]
         address = "https://authserver.com/auth"
         trustForwardHeader = true
+        authResponseHeaders = ["X-Auth-User"]
         [entryPoints.http.auth.forward.tls]
-          ca =  [ "path/to/local.crt"]
+          ca = "path/to/local.crt"
           caOptional = true
           cert = "path/to/foo.cert"
           key = "path/to/foo.key"
@@ -85,11 +93,11 @@ For more information about the CLI, see the documentation about [Traefik command
     Whitespace is used as option separator and `,` is used as value separator for the list.  
     The names of the options are case-insensitive.
 
-In compose file the entrypoint syntax is different:
+In compose file the entrypoint syntax is different. Notice how quotes are used:
 
 ```yaml
 traefik:
-    image: traefik
+    image: traefik:v1.7
     command:
         - --defaultentrypoints=powpow
         - "--entryPoints=Name:powpow Address::42 Compress:true"
@@ -97,7 +105,7 @@ traefik:
 or
 ```yaml
 traefik:
-    image: traefik
+    image: traefik:v1.7
     command: --defaultentrypoints=powpow --entryPoints='Name:powpow Address::42 Compress:true'
 ```
 
@@ -108,6 +116,11 @@ Name:foo
 Address::80
 TLS:/my/path/foo.cert,/my/path/foo.key;/my/path/goo.cert,/my/path/goo.key;/my/path/hoo.cert,/my/path/hoo.key
 TLS
+TLS.MinVersion:VersionTLS11
+TLS.CipherSuites:TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA384
+TLS.SniStrict:true
+TLS.DefaultCertificate.Cert:path/to/foo.cert
+TLS.DefaultCertificate.Key:path/to/foo.key
 CA:car
 CA.Optional:true
 Redirect.EntryPoint:https
@@ -121,9 +134,12 @@ ProxyProtocol.TrustedIPs:192.168.0.1
 ProxyProtocol.Insecure:true
 ForwardedHeaders.TrustedIPs:10.0.0.3/24,20.0.0.3/24
 Auth.Basic.Users:test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/,test2:$apr1$d9hr9HBB$4HxwgUir3HP4EsggP/QNo0
+Auth.Basic.Removeheader:true
 Auth.Digest.Users:test:traefik:a2688e031edb4be6a3797f3882655c05,test2:traefik:518845800f9e2bfb1f1f740ec24f074e
+Auth.Digest.Removeheader:true
 Auth.HeaderField:X-WebAuth-User
 Auth.Forward.Address:https://authserver.com/auth
+Auth.Forward.AuthResponseHeaders:X-Auth,X-Test,X-Secret
 Auth.Forward.TrustForwardHeader:true
 Auth.Forward.TLS.CA:path/to/local.crt
 Auth.Forward.TLS.CAOptional:true
@@ -208,7 +224,7 @@ Define an entrypoint with SNI support.
 ```
 
 !!! note
-    If an empty TLS configuration is done, default self-signed certificates are generated.
+    If an empty TLS configuration is provided, default self-signed certificates are generated.
 
 
 ### Dynamic Certificates
@@ -219,8 +235,10 @@ If you need to add or remove TLS certificates while Traefik is started, Dynamic 
 ## TLS Mutual Authentication
 
 TLS Mutual Authentication can be `optional` or not.
-If it's `optional`, Træfik will authorize connection with certificates not signed by a specified Certificate Authority (CA).
-Otherwise, Træfik will only accept clients that present a certificate signed by a specified Certificate Authority (CA).
+
+* If `optional = true`, if a certificate is provided, verifies if it is signed by a specified Certificate Authority (CA). Otherwise proceeds without any certificate.
+* If `optional = false`, Traefik will only accept clients that present a certificate signed by a specified Certificate Authority (CA).
+
 `ClientCAFiles` can be configured with multiple `CA:s` in the same file or use multiple files containing one or several `CA:s`.
 The `CA:s` has to be in PEM format.
 
@@ -268,6 +286,32 @@ Users can be specified directly in the TOML file, or indirectly by referencing a
   usersFile = "/path/to/.htpasswd"
 ```
 
+Optionally, you can:
+
+- pass authenticated user to application via headers
+
+```toml
+[entryPoints]
+  [entryPoints.http]
+  address = ":80"
+  [entryPoints.http.auth]
+    headerField = "X-WebAuth-User" # <-- header for the authenticated user
+    [entryPoints.http.auth.basic]
+    users = ["test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/", "test2:$apr1$d9hr9HBB$4HxwgUir3HP4EsggP/QNo0"]
+```
+
+- remove the Authorization header
+
+```toml
+[entryPoints]
+  [entryPoints.http]
+  address = ":80"
+  [entryPoints.http.auth]
+    [entryPoints.http.auth.basic]
+    removeHeader = true # <-- remove the Authorization header
+    users = ["test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/", "test2:$apr1$d9hr9HBB$4HxwgUir3HP4EsggP/QNo0"]
+```
+
 ### Digest Authentication
 
 You can use `htdigest` to generate them.
@@ -283,6 +327,32 @@ Users can be specified directly in the TOML file, or indirectly by referencing a
   [entryPoints.http.auth.digest]
   users = ["test:traefik:a2688e031edb4be6a3797f3882655c05", "test2:traefik:518845800f9e2bfb1f1f740ec24f074e"]
   usersFile = "/path/to/.htdigest"
+```
+
+Optionally, you can!
+
+- pass authenticated user to application via headers.
+
+```toml
+[entryPoints]
+  [entryPoints.http]
+  address = ":80"
+  [entryPoints.http.auth]
+    headerField = "X-WebAuth-User" # <-- header for the authenticated user
+    [entryPoints.http.auth.digest]
+    users = ["test:traefik:a2688e031edb4be6a3797f3882655c05", "test2:traefik:518845800f9e2bfb1f1f740ec24f074e"]
+```
+
+- remove the Authorization header.
+
+```toml
+[entryPoints]
+  [entryPoints.http]
+  address = ":80"
+  [entryPoints.http.auth]
+    [entryPoints.http.auth.digest]
+    removeHeader = true # <-- remove the Authorization header
+    users = ["test:traefik:a2688e031edb4be6a3797f3882655c05", "test2:traefik:518845800f9e2bfb1f1f740ec24f074e"]
 ```
 
 ### Forward Authentication
@@ -308,13 +378,21 @@ Otherwise, the response from the authentication server is returned.
     #
     trustForwardHeader = true
 
-    # Enable forward auth TLS connection.
+    # Copy headers from the authentication server to the request.
     #
     # Optional
     #
-    [entryPoints.http.auth.forward.tls]
-    cert = "authserver.crt"
-    key = "authserver.key"
+    authResponseHeaders = ["X-Auth-User", "X-Secret"]
+
+      # Enable forward auth TLS connection.
+      #
+      # Optional
+      #
+      [entryPoints.http.auth.forward.tls]
+      ca = "path/to/local.crt"
+      caOptional = true
+      cert = "path/to/foo.cert"
+      key = "path/to/foo.key"
 ```
 
 ## Specify Minimum TLS Version
@@ -338,6 +416,40 @@ To specify an https entry point with a minimum TLS version, and specifying an ar
       certFile = "integration/fixtures/https/snitest.org.cert"
       keyFile = "integration/fixtures/https/snitest.org.key"
 ```
+
+## Strict SNI Checking
+
+To enable strict SNI checking, so that connections cannot be made if a matching certificate does not exist.
+
+```toml
+[entryPoints]
+  [entryPoints.https]
+  address = ":443"
+    [entryPoints.https.tls]
+    sniStrict = true
+      [[entryPoints.https.tls.certificates]]
+      certFile = "integration/fixtures/https/snitest.com.cert"
+      keyFile = "integration/fixtures/https/snitest.com.key"
+```
+
+## Default Certificate
+
+To enable a default certificate to serve, so that connections without SNI or without a matching domain will be served this certificate.
+
+```toml
+[entryPoints]
+  [entryPoints.https]
+  address = ":443"
+    [entryPoints.https.tls]
+    [entryPoints.https.tls.defaultCertificate]
+      certFile = "integration/fixtures/https/snitest.com.cert"
+      keyFile = "integration/fixtures/https/snitest.com.key"
+```
+
+!!! note
+    There can only be one `defaultCertificate` set per entrypoint.
+    Use a single set of square brackets `[ ]`, instead of the two needed for normal certificates.
+    If no default certificate is provided, a self-signed certificate will be generated by Traefik, and used instead.
 
 ## Compression
 
@@ -376,7 +488,7 @@ To enable [ProxyProtocol](https://www.haproxy.org/download/1.8/doc/proxy-protoco
 Only IPs in `trustedIPs` will lead to remote client address replacement: you should declare your load-balancer IP or CIDR range here (in testing environment, you can trust everyone using `insecure = true`).
 
 !!! danger
-    When queuing Træfik behind another load-balancer, be sure to carefully configure Proxy Protocol on both sides.
+    When queuing Traefik behind another load-balancer, be sure to carefully configure Proxy Protocol on both sides.
     Otherwise, it could introduce a security risk in your system by forging requests.
 
 ```toml
