@@ -24,7 +24,7 @@ func TestHeaders_requestIdAdded(t *testing.T) {
 	h.ServeHTTP(rr, req, next)
 	assert.True(t, strings.HasPrefix(requestID, "s"))
 	id, _ := uuid.FromString(strings.TrimPrefix(requestID, "s"))
-	assert.Equal(t, uint(0x4), id.Version())
+	assert.Equal(t, uint8(0x4), id.Version())
 }
 
 func TestHeaders_requestIdAddedNoS(t *testing.T) {
@@ -42,7 +42,7 @@ func TestHeaders_requestIdAddedNoS(t *testing.T) {
 	h.ServeHTTP(rr, req, next)
 	assert.False(t, strings.HasPrefix(requestID, "s"))
 	id, _ := uuid.FromString(requestID)
-	assert.Equal(t, uint(0x4), id.Version())
+	assert.Equal(t, uint8(0x4), id.Version())
 }
 
 func TestHeaders_requestIdAlreadyPresent(t *testing.T) {
@@ -76,7 +76,7 @@ func TestHeaders_makesNewRequestIdForExistingHeader(t *testing.T) {
 	h.ServeHTTP(rr, req, next)
 	assert.True(t, strings.HasPrefix(requestID, "s"))
 	id, _ := uuid.FromString(strings.TrimPrefix(requestID, "s"))
-	assert.Equal(t, uint(0x4), id.Version())
+	assert.Equal(t, uint8(0x4), id.Version())
 }
 
 func TestHeaders_requestIdIncludesLabel(t *testing.T) {
@@ -93,7 +93,7 @@ func TestHeaders_requestIdIncludesLabel(t *testing.T) {
 	h.ServeHTTP(rr, req, next)
 	assert.True(t, strings.HasPrefix(requestID, "s-my-label-"))
 	id, _ := uuid.FromString(strings.TrimPrefix(requestID, "s-my-label-"))
-	assert.Equal(t, uint(0x4), id.Version())
+	assert.Equal(t, uint8(0x4), id.Version())
 }
 func TestHeaders_requestIdNoS_IncludesLabel(t *testing.T) {
 	req, err := http.NewRequest("GET", "/foo", nil)
@@ -110,5 +110,5 @@ func TestHeaders_requestIdNoS_IncludesLabel(t *testing.T) {
 	h.ServeHTTP(rr, req, next)
 	assert.True(t, strings.HasPrefix(requestID, "my-label-"))
 	id, _ := uuid.FromString(strings.TrimPrefix(requestID, "my-label-"))
-	assert.Equal(t, uint(0x4), id.Version())
+	assert.Equal(t, uint8(0x4), id.Version())
 }

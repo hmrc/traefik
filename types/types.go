@@ -30,7 +30,7 @@ type Backend struct {
 	HealthCheck        *HealthCheck        `json:"healthCheck,omitempty"`
 	Buffering          *Buffering          `json:"buffering,omitempty"`
 	ResponseForwarding *ResponseForwarding `json:"forwardingResponse,omitempty"`
-	AuditTap       *atconf.AuditSink `json:"auditTap,omitempty"`
+	AuditTap           *atconf.AuditSink   `json:"auditTap,omitempty"`
 }
 
 // ResponseForwarding holds configuration for the forward of the response

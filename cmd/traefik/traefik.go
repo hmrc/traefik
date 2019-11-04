@@ -26,7 +26,6 @@ import (
 	"github.com/containous/traefik/job"
 	"github.com/containous/traefik/log"
 	atconf "github.com/containous/traefik/middlewares/audittap/configuration"
-	"github.com/containous/traefik/provider/acme"
 	"github.com/containous/traefik/provider/ecs"
 	"github.com/containous/traefik/provider/kubernetes"
 	"github.com/containous/traefik/safe"

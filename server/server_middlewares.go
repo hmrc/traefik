@@ -9,6 +9,8 @@ import (
 	"github.com/containous/traefik/middlewares"
 	"github.com/containous/traefik/middlewares/accesslog"
 	mauth "github.com/containous/traefik/middlewares/auth"
+	atconf "github.com/containous/traefik/middlewares/audittap/configuration"
+	"github.com/containous/traefik/middlewares/headers"
 	"github.com/containous/traefik/middlewares/errorpages"
 	"github.com/containous/traefik/middlewares/redirect"
 	"github.com/containous/traefik/types"
