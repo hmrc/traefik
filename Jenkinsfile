@@ -1,7 +1,7 @@
 #!/usr/bin/env groovy
 pipeline {
   agent {
-    label 'amislave'
+    label 'commonslave'
   }
 
   stages {
