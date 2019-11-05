@@ -19,9 +19,9 @@ import (
 	"github.com/containous/traefik/log"
 	"github.com/containous/traefik/metrics"
 	"github.com/containous/traefik/middlewares"
+	"github.com/containous/traefik/middlewares/audittap"
 	"github.com/containous/traefik/middlewares/pipelining"
 	"github.com/containous/traefik/rules"
-	"github.com/containous/traefik/middlewares/audittap"
 	traefiktls "github.com/containous/traefik/tls"
 	"github.com/containous/traefik/tls/generate"
 	"github.com/containous/traefik/types"
@@ -172,8 +172,8 @@ func (s *Server) loadFrontendConfig(
 
 			auditTapOrFwd, err := s.buildAuditTap(fwd, frontend, frontendName)
 			if err != nil {
-				return nil, fmt.Errorf("Error adding audittap to forwarder %s: %v", 
-				frontendName, err)
+				return nil, fmt.Errorf("Error adding audittap to forwarder %s: %v",
+					frontendName, err)
 			}
 
 			lb, healthCheckConfig, err := s.buildBalancerMiddlewares(frontendName, frontend, backend, auditTapOrFwd)
@@ -282,18 +282,18 @@ func (s *Server) buildForwarder(entryPointName string, entryPoint *configuration
 }
 
 func (s *Server) buildAuditTap(fwd http.Handler, frontend *types.Frontend, frontendName string) (http.Handler, error) {
-    if s.globalConfiguration.AuditSink != nil {
-        auditTap, err := audittap.NewAuditTap(s.globalConfiguration.AuditSink, s.auditStreams, frontend.Backend, fwd)
-        if err != nil {
-            log.Fatal("Error starting server: ", err)
-        }
+	if s.globalConfiguration.AuditSink != nil {
+		auditTap, err := audittap.NewAuditTap(s.globalConfiguration.AuditSink, s.auditStreams, frontend.Backend, fwd)
+		if err != nil {
+			log.Fatal("Error starting server: ", err)
+		}
 
-        newAuditTap := s.wrapHTTPHandlerWithAccessLog(auditTap, frontendName)
+		newAuditTap := s.wrapHTTPHandlerWithAccessLog(auditTap, frontendName)
 
-        return newAuditTap, err
-    }
+		return newAuditTap, err
+	}
 
-    return fwd, nil
+	return fwd, nil
 }
 
 func buildServerRoute(serverEntryPoint *serverEntryPoint, frontendName string, frontend *types.Frontend, hostResolver *hostresolver.Resolver) (*types.ServerRoute, error) {
