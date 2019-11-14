@@ -7,16 +7,20 @@ import (
 	"github.com/containous/traefik/middlewares/audittap/types"
 )
 
+const apiGatewayPathPrefix = "/current/"
+
 // APIAuditEvent is the audit event created for API calls
 type APIAuditEvent struct {
 	AuditEvent
 	AuthorisationToken string `json:"authorisationToken,omitempty"`
+	ProxiedPath        string `json:"proxiedPath,omitempty"`
 }
 
 // AppendRequest appends information about the request to the audit event
 func (ev *APIAuditEvent) AppendRequest(ctx *RequestContext, auditSpec *AuditSpecification) {
 	appendCommonRequestFields(&ev.AuditEvent, ctx)
 	ev.AuthorisationToken = ctx.FlatHeaders.GetString("authorization")
+	ev.defineRequestPath(ctx)
 	if body, _, err := copyRequestBody(ctx.Req); err == nil {
 		if &auditSpec.AuditObfuscation != nil {
 			ct := ctx.FlatHeaders.GetString("content-type")
@@ -60,4 +64,12 @@ func NewAPIAuditEvent(auditSource string, auditType string) Auditer {
 	ev := APIAuditEvent{}
 	ev.AuditEvent = AuditEvent{AuditSource: auditSource, AuditType: auditType}
 	return &ev
+}
+
+func (ev *APIAuditEvent) defineRequestPath(ctx *RequestContext) {
+	if forwardPrefix := ctx.FlatHeaders.GetString("x-forwarded-prefix"); strings.HasPrefix(ev.Path, apiGatewayPathPrefix) && forwardPrefix != "" {
+		inferredPath := strings.Replace(ev.Path, apiGatewayPathPrefix, forwardPrefix, 1)
+		ev.ProxiedPath = ev.Path
+		ev.Path = inferredPath
+	}
 }
