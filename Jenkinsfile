@@ -29,5 +29,12 @@ pipeline {
           }
         }
 
+	stage('Create new tag') {
+          steps {
+              ansiColor('xterm') {
+                sh("bash set_tag.sh")
+              }
+          }
+        }
   }
 }
