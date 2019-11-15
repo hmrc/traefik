@@ -563,6 +563,9 @@ func (s *Server) setupServerEntryPoint(newServerEntryPointName string, newServer
 		case http.StateClosed:
 			serverEntryPoint.hijackConnectionTracker.RemoveHijackedConnection(conn)
 		}
+		if s.globalConfiguration.API != nil && s.globalConfiguration.API.StatsRecorder != nil {
+			s.globalConfiguration.API.StatsRecorder.ConnStateChange(conn, state)
+		}
 	}
 
 	return serverEntryPoint
