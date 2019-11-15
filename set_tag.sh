@@ -15,5 +15,7 @@ NEW_VERSION="$MAJOR.$MINOR.0"
 
 echo "New Version: $NEW_VERSION"
 
+echo "$NEW_VERSION" > RELEASE_VERSION
+
 git tag release/${NEW_VERSION}
 git push --tags

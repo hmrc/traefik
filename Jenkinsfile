@@ -33,6 +33,10 @@ pipeline {
           steps {
               ansiColor('xterm') {
                 sh("bash set_tag.sh")
+                script {
+                  build_version = readFile "RELEASE_VERSION"
+                  currentBuild.description = "Release: " + build_version
+                }
               }
           }
         }
