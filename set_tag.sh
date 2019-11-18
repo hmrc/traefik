@@ -1,6 +1,8 @@
 #!/bin/bash
 
-CURRENT_LATEST_TAG=$(git tag --sort=-version:refname | grep "release\/*" | head -1)
+set -e
+
+CURRENT_LATEST_TAG=$(git tag --sort=-version:refname | grep "release\/" | head -1)
 
 VERSION=$(echo $CURRENT_LATEST_TAG | awk -F'/' '{print $2}')
 
