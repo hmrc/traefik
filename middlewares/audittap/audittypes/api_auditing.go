@@ -25,9 +25,9 @@ func (ev *APIAuditEvent) AppendRequest(ctx *RequestContext, auditSpec *AuditSpec
 		if &auditSpec.AuditObfuscation != nil {
 			ct := ctx.FlatHeaders.GetString("content-type")
 			var fnObfuscate func(b []byte) ([]byte, error)
-			if ct == "application/x-www-form-urlencoded" {
+			if strings.HasPrefix(ct, "application/x-www-form-urlencoded") {
 				fnObfuscate = auditSpec.AuditObfuscation.ObfuscateURLEncoded
-			} else if ct == "application/json" {
+			} else if strings.HasPrefix(ct, "application/json") {
 				fnObfuscate = auditSpec.AuditObfuscation.ObfuscateJSON
 			}
 			if fnObfuscate != nil {

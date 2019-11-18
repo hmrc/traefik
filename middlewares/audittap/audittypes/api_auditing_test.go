@@ -88,7 +88,7 @@ func TestFormEncodedContentMasking(t *testing.T) {
 
 	ev := APIAuditEvent{}
 	req := httptest.NewRequest("POST", "/some/api/resource?p1=v1", strings.NewReader(requestBody))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=ISO-8859-1")
 
 	obfuscate := AuditObfuscation{MaskFields: []string{"password", "secret"}, MaskValue: "@@@"}
 	spec := &AuditSpecification{}
@@ -113,7 +113,7 @@ func TestJsonContentMasking(t *testing.T) {
 
 	ev := APIAuditEvent{}
 	req := httptest.NewRequest("POST", "/some/api/resource?p1=v1", strings.NewReader(requestBody))
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
 
 	obfuscate := AuditObfuscation{MaskFields: []string{"password", "secret"}, MaskValue: "@@@"}
 	spec := &AuditSpecification{}
