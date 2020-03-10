@@ -68,6 +68,20 @@ func TestApiGatewayPrefixRulePathChange(t *testing.T) {
 	assert.Equal(t, "p1=v1", ev.QueryString)
 }
 
+func TestApiGatewayPrefixRulePathChangeWithoutTrailingSlash(t *testing.T) {
+
+	ev := APIAuditEvent{}
+	req := httptest.NewRequest("POST", "/current/api/resource?p1=v1", nil)
+	req.Header.Set("X-Forwarded-Prefix", "/the/actual/service")
+
+	spec := &AuditSpecification{}
+	ev.AppendRequest(NewRequestContext(req), spec)
+
+	assert.Equal(t, "/the/actual/service/api/resource", ev.Path)
+	assert.Equal(t, "/current/api/resource", ev.ProxiedPath)
+	assert.Equal(t, "p1=v1", ev.QueryString)
+}
+
 func TestDefinePathReplacementOnlyIsForPrefix(t *testing.T) {
 
 	ev := APIAuditEvent{}

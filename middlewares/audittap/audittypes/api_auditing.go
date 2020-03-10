@@ -68,6 +68,9 @@ func NewAPIAuditEvent(auditSource string, auditType string) Auditer {
 
 func (ev *APIAuditEvent) defineRequestPath(ctx *RequestContext) {
 	if forwardPrefix := ctx.FlatHeaders.GetString("x-forwarded-prefix"); strings.HasPrefix(ev.Path, apiGatewayPathPrefix) && forwardPrefix != "" {
+		if !strings.HasSuffix(forwardPrefix, "/") {
+			forwardPrefix = forwardPrefix + "/"
+		}
 		inferredPath := strings.Replace(ev.Path, apiGatewayPathPrefix, forwardPrefix, 1)
 		ev.ProxiedPath = ev.Path
 		ev.Path = inferredPath
