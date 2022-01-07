@@ -115,6 +115,7 @@ leakDetectionExemptions:
       - '/integration/fixtures/tlsclientheaders/root.pem'
       - '/integration/fixtures/tlsclientheaders/server.pem'
       - '/integration/fixtures/acme/ssl/pebble.minica.pem'
+    text:'pem'
 
   - ruleId: 'cert_1'
     filePaths:
@@ -143,7 +144,7 @@ leakDetectionExemptions:
       - '/middlewares/tracing/zipkin/zipkin.go'
       - '/provider/kubernetes/kubernetes_test.go'
       - '/docs/user-guide/kv-config.md'
-
+    text:'PRIVATE KEY'
 
   - ruleId: 'aws_2'
     filePaths:
