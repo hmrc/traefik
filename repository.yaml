@@ -144,7 +144,7 @@ leakDetectionExemptions:
       - '/middlewares/tracing/zipkin/zipkin.go'
       - '/provider/kubernetes/kubernetes_test.go'
       - '/docs/user-guide/kv-config.md'
-    text:'PRIVATE KEY'
+    text: 'PRIVATE KEY'
 
   - ruleId: 'aws_2'
     filePaths:
