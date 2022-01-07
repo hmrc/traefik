@@ -115,6 +115,7 @@ leakDetectionExemptions:
       - '/integration/fixtures/tlsclientheaders/root.pem'
       - '/integration/fixtures/tlsclientheaders/server.pem'
       - '/integration/fixtures/acme/ssl/pebble.minica.pem'
+    text:'pem'
 
   - ruleId: 'cert_1'
     filePaths:
@@ -143,12 +144,16 @@ leakDetectionExemptions:
       - '/middlewares/tracing/zipkin/zipkin.go'
       - '/provider/kubernetes/kubernetes_test.go'
       - '/docs/user-guide/kv-config.md'
-
+    text:'PRIVATE KEY'
 
   - ruleId: 'aws_2'
     filePaths:
       # from upstream
       - '/vendor/github.com/aws/aws-sdk-go/service/ecs/api.go'
+      
+  - ruleId: 'aws_secret_access_key'
+    filePaths:
       - '/docs/configuration/backends/rancher.md'
+    text:'secretKey'
 
 repoVisibility: public_0C3F0CE3E6E6448FAD341E7BFA50FCD333E06A20CFF05FCACE61154DDBBADF71      
