@@ -115,7 +115,7 @@ leakDetectionExemptions:
       - '/integration/fixtures/tlsclientheaders/root.pem'
       - '/integration/fixtures/tlsclientheaders/server.pem'
       - '/integration/fixtures/acme/ssl/pebble.minica.pem'
-    text:'pem'
+    text: 'pem'
 
   - ruleId: 'cert_1'
     filePaths:
@@ -154,6 +154,6 @@ leakDetectionExemptions:
   - ruleId: 'aws_secret_access_key'
     filePaths:
       - '/docs/configuration/backends/rancher.md'
-    text:'secretKey'
+    text: 'secretKey'
 
 repoVisibility: public_0C3F0CE3E6E6448FAD341E7BFA50FCD333E06A20CFF05FCACE61154DDBBADF71      
