@@ -1749,7 +1749,7 @@ func (s *Server) initialiseAuditStreams() {
 		case "HTTP":
 			as, err = streams.NewHTTPSink("", s.globalConfiguration.AuditSink.Endpoint)
 			if err != nil {
-				log.Fatal("Error creating new AMQP Sink: ", err)
+				log.Fatal("Error creating new HTTP Sink: ", err)
 			}
 			log.Info("Created HTTP Sink")
 		case "Blackhole":
