@@ -58,6 +58,6 @@ func (ev *APIAuditEvent) ToEncoded() types.Encoded {
 // NewAPIAuditEvent creates a new APIAuditEvent with the provided auditSource and auditType
 func NewAPIAuditEvent(auditSource string, auditType string) Auditer {
 	ev := APIAuditEvent{}
-	ev.AuditEvent = AuditEvent{AuditSource: auditSource, AuditType: auditType, Metadata: types.DataMap{"publishedByTraefik": true}}
+	ev.AuditEvent = AuditEvent{AuditSource: auditSource, AuditType: auditType, Metadata: types.DataMap{keyPublishedByTraefik: true}}
 	return &ev
 }

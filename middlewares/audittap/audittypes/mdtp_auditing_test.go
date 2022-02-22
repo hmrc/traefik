@@ -272,3 +272,11 @@ func makeAuditSpec() *AuditSpecification {
 		RequestBodyCaptures: []*Filter{{Source: "Host", Matches: []*regexp.Regexp{regexp.MustCompile(".*")}}},
 	}
 }
+
+func TestNewMdtpAuditEventMetadata(t *testing.T) {
+	auditer := NewMdtpAuditEvent()
+	publishedByTraefik := auditer.(*MdtpAuditEvent).Metadata.Get("publishedByTraefik").(bool)
+	if publishedByTraefik != true {
+		t.Errorf("MdtpAuditEvent is initialised with wrong 'publishedByTraefik' value, got: %t, want: %t.", publishedByTraefik, true)
+	}
+}

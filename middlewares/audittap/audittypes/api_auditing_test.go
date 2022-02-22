@@ -112,3 +112,11 @@ func TestNewApiAudit(t *testing.T) {
 		assert.Fail(t, "Was not an APIAuditEvent")
 	}
 }
+
+func TestNewApiAuditMetadata(t *testing.T) {
+	auditer := NewAPIAuditEvent("ping", "pong")
+	publishedByTraefik := auditer.(*APIAuditEvent).Metadata.Get("publishedByTraefik").(bool)
+	if publishedByTraefik != true {
+		t.Errorf("APIAuditEvents is initialised with wrong 'publishedByTraefik' value, got: %t, want: %t.", publishedByTraefik, true)
+	}
+}

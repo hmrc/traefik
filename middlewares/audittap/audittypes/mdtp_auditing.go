@@ -35,6 +35,7 @@ type MdtpAuditEvent struct {
 	ResponseHeaders types.DataMap `json:"responseHeaders,omitempty"`
 	Detail          types.DataMap `json:"detail,omitempty"`
 	Tags            types.DataMap `json:"tags,omitempty"`
+	Metadata        types.DataMap `json:"metadata,omitempty"`
 }
 
 // AppendRequest appends information about the request to the audit event
@@ -98,7 +99,7 @@ func (ev *MdtpAuditEvent) ToEncoded() types.Encoded {
 
 // NewMdtpAuditEvent creates a new MDTP AuditEvent with the provided auditSource and auditType
 func NewMdtpAuditEvent() Auditer {
-	ev := MdtpAuditEvent{Detail: types.DataMap{}, Tags: types.DataMap{}}
+	ev := MdtpAuditEvent{Detail: types.DataMap{}, Tags: types.DataMap{}, Metadata: types.DataMap{keyPublishedByTraefik: true}}
 	return &ev
 }
 

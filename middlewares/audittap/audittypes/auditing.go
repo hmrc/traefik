@@ -14,12 +14,13 @@ import (
 
 	ahttp "github.com/containous/traefik/middlewares/audittap/http"
 	"github.com/containous/traefik/middlewares/audittap/types"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 )
 
 const (
-	keyPayloadContents = "contents"
-	keyPayloadLength   = "length"
+	keyPayloadContents    = "contents"
+	keyPayloadLength      = "length"
+	keyPublishedByTraefik = "publishedByTraefik"
 )
 
 // AuditEvent captures the content and metadata of an HTTP request and response.
@@ -43,10 +44,6 @@ type AuditEvent struct {
 	RequestPayload  types.DataMap `json:"requestPayload,omitempty"`
 	ResponseHeaders types.DataMap `json:"responseHeaders,omitempty"`
 	Metadata        types.DataMap `json:"metadata,omitempty"`
-}
-
-type Metadata struct {
-	publishedByTraefik bool
 }
 
 // AuditConstraints defines validation constraints an audit event must satisfy
