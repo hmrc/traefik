@@ -784,7 +784,7 @@
   name = "github.com/jjcollinge/servicefabric"
   packages = ["."]
   revision = "8eebe170fa1ba25d3dfb928b3f86a7313b13b9fe"
-  version = "v0.0.1'  
+  version = "v0.0.1"
 
 [[projects]]
   name = "github.com/jmespath/go-jmespath"
