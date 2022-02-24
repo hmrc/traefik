@@ -1,8 +1,9 @@
 package streams
 
 import (
-	"github.com/containous/traefik/middlewares/audittap/types"
 	"io"
+
+	"github.com/containous/traefik/middlewares/audittap/types"
 )
 
 //-------------------------------------------------------------------------------------------------

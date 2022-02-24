@@ -3,10 +3,11 @@ package streams
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHttpSink(t *testing.T) {

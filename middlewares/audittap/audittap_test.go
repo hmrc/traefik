@@ -121,7 +121,7 @@ func TestOversizedAuditDropped(t *testing.T) {
 	tap, err := NewAuditTap(cfg, []audittypes.AuditStream{capture}, "backend1", http.HandlerFunc(notFound))
 	assert.NoError(t, err)
 	audit := &audittypes.APIAuditEvent{}
-	payload := atypes.DataMap{"SomeKey": "IAmLongerThan10Bytes"}
+	payload := atypes.DataMap{"SomeKey": "IAmLongerThan50Bytes"}
 	audit.RequestPayload = payload
 
 	err = tap.submitAudit(audit)

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/containous/traefik/log"
 	"github.com/containous/traefik/middlewares/audittap/types"
 )
 
@@ -33,7 +34,8 @@ func (has *httpSink) Audit(encoded types.Encoded) error {
 	request.Header.Set("Content-Length", fmt.Sprintf("%d", encoded.Length()))
 
 	res, err := http.DefaultClient.Do(request)
-	if err != nil {
+	if err != nil || res.StatusCode > 299 {
+		log.Warn("DS_EventMissed_AuditFailureResponse:" + string(encoded.Bytes))
 		return err
 	}
 	return res.Body.Close()
