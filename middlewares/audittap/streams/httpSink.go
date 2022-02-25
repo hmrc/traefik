@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/containous/traefik/log"
 	"github.com/containous/traefik/middlewares/audittap/types"
+	log "github.com/sirupsen/logrus"
 )
 
 type httpSink struct {
@@ -35,6 +35,11 @@ func (has *httpSink) Audit(encoded types.Encoded) error {
 
 	res, err := http.DefaultClient.Do(request)
 	if err != nil || res.StatusCode > 299 {
+		log.SetFormatter(&log.JSONFormatter{
+			FieldMap: log.FieldMap{
+				log.FieldKeyMsg: "message",
+			},
+		})
 		log.Warn("DS_EventMissed_AuditFailureResponse:" + string(encoded.Bytes))
 		return err
 	}
