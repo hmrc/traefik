@@ -40,7 +40,7 @@ func (has *httpSink) Audit(encoded types.Encoded) error {
 				log.FieldKeyMsg: "message",
 			},
 		})
-		log.Warn("DS_EventMissed_AuditFailureResponse:" + string(encoded.Bytes))
+		log.Warn("DS_EventMissed_AuditFailureResponse audit item : " + string(encoded.Bytes))
 		return err
 	}
 	return res.Body.Close()
