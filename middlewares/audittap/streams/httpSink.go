@@ -31,17 +31,17 @@ func NewHTTPSink(method, endpoint string) (AuditSink, error) {
 
 func (has *httpSink) Audit(encoded types.Encoded) error {
 
-	caCert, err := ioutil.ReadFile("server.crt")
+	caCert, err := ioutil.ReadFile("/etc/ssl/certs/mdtp.pem")
 	if err != nil {
 		log.Error(err)
 	}
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
 
-	//cert, err := tls.LoadX509KeyPair("client.crt", "client.key")
-	if err != nil {
-		log.Fatal(err)
-	}
+	// cert, err := tls.LoadX509KeyPair("client.crt", "client.key")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
 	client := &http.Client{
 		Transport: &http.Transport{
@@ -54,14 +54,13 @@ func (has *httpSink) Audit(encoded types.Encoded) error {
 
 	request, err := http.NewRequest(has.method, has.endpoint, bytes.NewBuffer(encoded.Bytes))
 
-	res, err := client.Do(request)
-
 	if err != nil {
 		return err
 	}
 	request.Header.Set("Content-Length", fmt.Sprintf("%d", encoded.Length()))
 
-	res, err := http.DefaultClient.Do(request)
+	res, err := client.Do(request)
+	// res, err := http.DefaultClient.Do(request)
 	if err != nil || res.StatusCode > 299 {
 		log.SetFormatter(&log.JSONFormatter{
 			FieldMap: log.FieldMap{
