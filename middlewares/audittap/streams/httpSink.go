@@ -2,7 +2,10 @@ package streams
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 
@@ -27,7 +30,32 @@ func NewHTTPSink(method, endpoint string) (AuditSink, error) {
 }
 
 func (has *httpSink) Audit(encoded types.Encoded) error {
+
+	caCert, err := ioutil.ReadFile("server.crt")
+	if err != nil {
+		log.Error(err)
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	//cert, err := tls.LoadX509KeyPair("client.crt", "client.key")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: caCertPool,
+				//Certificates: []tls.Certificate{cert},
+			},
+		},
+	}
+
 	request, err := http.NewRequest(has.method, has.endpoint, bytes.NewBuffer(encoded.Bytes))
+
+	res, err := client.Do(request)
+
 	if err != nil {
 		return err
 	}
