@@ -122,6 +122,7 @@ accessKey = "XXXXXXXXXXXXXXXXXXXX"
 # SecretKey to use when connecting to the Rancher API.
 #
 # Required
+# LDS ignore
 secretKey = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 ```
 
