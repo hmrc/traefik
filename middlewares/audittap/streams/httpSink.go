@@ -19,6 +19,8 @@ type httpSink struct {
 
 // NewHTTPSink creates a new HTTP sink
 func NewHTTPSink(method, endpoint string) (AuditSink, error) {
+	log.Info("New HTTPSink")
+
 	if method == "" {
 		method = http.MethodPost
 	}
@@ -85,5 +87,6 @@ func (has *httpSink) Audit(encoded types.Encoded) error {
 }
 
 func (has *httpSink) Close() error {
+	log.Info("HTTPSink Close")
 	return nil
 }
