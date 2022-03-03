@@ -31,9 +31,13 @@ func NewHTTPSink(method, endpoint string) (AuditSink, error) {
 
 func (has *httpSink) Audit(encoded types.Encoded) error {
 
+	log.Info("Audit HTTPSINK")
+
 	caCert, err := ioutil.ReadFile("/etc/ssl/certs/mdtp.pem")
 	if err != nil {
-		log.Error(err)
+		log.Info("Error Cert Read ", err)
+	} else {
+		log.Info("Cert:", caCert[0:20])
 	}
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
@@ -55,11 +59,17 @@ func (has *httpSink) Audit(encoded types.Encoded) error {
 	request, err := http.NewRequest(has.method, has.endpoint, bytes.NewBuffer(encoded.Bytes))
 
 	if err != nil {
+		log.Info("Request ", request, " Error: ", err)
+
 		return err
+	} else {
+		log.Info("Request ", request)
 	}
 	request.Header.Set("Content-Length", fmt.Sprintf("%d", encoded.Length()))
-
 	res, err := client.Do(request)
+
+	log.Info("Client Response: ", res, " error ", err)
+
 	// res, err := http.DefaultClient.Do(request)
 	if err != nil || res.StatusCode > 299 {
 		log.SetFormatter(&log.JSONFormatter{
@@ -70,6 +80,7 @@ func (has *httpSink) Audit(encoded types.Encoded) error {
 		log.Warn("DS_EventMissed_AuditFailureResponse audit item : " + string(encoded.Bytes))
 		return err
 	}
+	log.Info("Finished HTTPAuditSink")
 	return res.Body.Close()
 }
 
