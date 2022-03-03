@@ -768,6 +768,7 @@ func (s *Server) initialiseAuditStreams() {
 			return
 		}
 
+		log.Info("Preparing NewAuditStream... ")
 		astr := streams.NewAuditStream(as)
 		s.auditStreams = append(s.auditStreams, astr)
 	} else {

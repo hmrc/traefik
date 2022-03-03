@@ -11,7 +11,6 @@ import (
 	"github.com/containous/traefik/log"
 	"github.com/containous/traefik/middlewares/audittap/audittypes"
 	"github.com/containous/traefik/middlewares/audittap/configuration"
-	"github.com/hmrc-traefik/log"
 )
 
 // Possible ProxyingFor types
