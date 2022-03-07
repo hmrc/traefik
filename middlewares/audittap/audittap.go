@@ -142,13 +142,11 @@ func NewAuditTap(config *configuration.AuditSink, streams []audittypes.AuditStre
 
 func (tap *AuditTap) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
-	log.Info("ServeHTTP ... ")
-
 	var auditer audittypes.Auditer
 	ctx := audittypes.NewRequestContext(req)
 	shouldAudit := audittypes.ShouldAudit(ctx, &tap.AuditSpecification)
 
-	log.Infof("Should audit is %t for Host:%s URI:%s Headers:%v", shouldAudit, req.Host, req.RequestURI, req.Header)
+	log.Debugf("Should audit is %t for Host:%s URI:%s Headers:%v", shouldAudit, req.Host, req.RequestURI, req.Header)
 
 	if shouldAudit {
 		switch strings.ToLower(tap.ProxyingFor) {

@@ -267,21 +267,17 @@ func (s *Server) buildForwarder(entryPointName string, entryPoint *configuration
 		return nil, fmt.Errorf("error creating forwarder for frontend %s: %v", frontendName, err)
 	}
 
-	log.Info("Tracing Middleware")
 	if s.tracingMiddleware.IsEnabled() {
 		tm := s.tracingMiddleware.NewForwarderMiddleware(frontendName, frontend.Backend)
 
-		log.Info("handlerFunc")
 		next := fwd
 		fwd = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			log.Info("Serve HTTP")
 			tm.ServeHTTP(w, r, next.ServeHTTP)
 		})
 	}
 
 	fwd = pipelining.NewPipelining(fwd)
 
-	log.Info("Finished Tracing Middleware")
 	return fwd, nil
 }
 
@@ -302,7 +298,6 @@ func (s *Server) buildAuditTap(fwd http.Handler, frontend *types.Frontend, front
 }
 
 func buildServerRoute(serverEntryPoint *serverEntryPoint, frontendName string, frontend *types.Frontend, hostResolver *hostresolver.Resolver) (*types.ServerRoute, error) {
-	log.Info("BuildServerRoute")
 	serverRoute := &types.ServerRoute{Route: serverEntryPoint.httpRouter.GetHandler().NewRoute().Name(frontendName)}
 
 	priority := 0

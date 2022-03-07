@@ -740,8 +740,6 @@ func (s *Server) buildNameOrIPToCertificate(certs []tls.Certificate) map[string]
 
 func (s *Server) initialiseAuditStreams() {
 
-	log.Info("Audit Initialise Audit Streams")
-
 	var as streams.AuditSink
 	if s.globalConfiguration.AuditSink != nil {
 		var err error
@@ -768,7 +766,6 @@ func (s *Server) initialiseAuditStreams() {
 			return
 		}
 
-		log.Info("Preparing NewAuditStream... ")
 		astr := streams.NewAuditStream(as)
 		s.auditStreams = append(s.auditStreams, astr)
 	} else {
