@@ -120,6 +120,8 @@ leakDetectionExemptions:
     filePaths:
       # from upstream
       - '/examples/traefik.key'
+      - '/examples/test.key.pem'
+      - '/examples/test.cert.pem'
       - '/integration/resources/tls/consul.key'
       - '/integration/resources/tls/local.key'
       - '/integration/fixtures/acme/ssl/wildcard.key'
