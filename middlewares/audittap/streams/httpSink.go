@@ -19,7 +19,6 @@ type httpSink struct {
 
 // NewHTTPSink creates a new HTTP sink
 func NewHTTPSink(method, endpoint string) (AuditSink, error) {
-
 	if method == "" {
 		method = http.MethodPost
 	}
@@ -34,9 +33,7 @@ func (has *httpSink) Audit(encoded types.Encoded) error {
 
 	caCert, err := ioutil.ReadFile("/etc/ssl/certs/mdtp.pem")
 	if err != nil {
-		log.Info("Error Cert Read ", err)
-	} else {
-		log.Info("Cert:", caCert[0:20])
+		log.Error(err)
 	}
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
@@ -55,6 +52,7 @@ func (has *httpSink) Audit(encoded types.Encoded) error {
 		return err
 	}
 	request.Header.Set("Content-Length", fmt.Sprintf("%d", encoded.Length()))
+
 	res, err := client.Do(request)
 
 	if err != nil || res.StatusCode > 299 {

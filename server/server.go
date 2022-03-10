@@ -739,7 +739,6 @@ func (s *Server) buildNameOrIPToCertificate(certs []tls.Certificate) map[string]
 }
 
 func (s *Server) initialiseAuditStreams() {
-
 	var as streams.AuditSink
 	if s.globalConfiguration.AuditSink != nil {
 		var err error
