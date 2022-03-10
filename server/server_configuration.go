@@ -282,7 +282,6 @@ func (s *Server) buildForwarder(entryPointName string, entryPoint *configuration
 }
 
 func (s *Server) buildAuditTap(fwd http.Handler, frontend *types.Frontend, frontendName string) (http.Handler, error) {
-	log.Info("BuildAuditTap")
 	if s.globalConfiguration.AuditSink != nil {
 		auditTap, err := audittap.NewAuditTap(s.globalConfiguration.AuditSink, s.auditStreams, frontend.Backend, fwd)
 		if err != nil {
