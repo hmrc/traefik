@@ -115,13 +115,14 @@ leakDetectionExemptions:
       - '/integration/fixtures/tlsclientheaders/root.pem'
       - '/integration/fixtures/tlsclientheaders/server.pem'
       - '/integration/fixtures/acme/ssl/pebble.minica.pem'
+      - '/examples/test.crt'
 
   - ruleId: 'cert_1'
     filePaths:
       # from upstream
       - '/examples/traefik.key'
-      - '/examples/test.key.pem'
-      - '/examples/test.cert.pem'
+      - '/examples/test.key'
+      - '/examples/test.crt'
       - '/integration/resources/tls/consul.key'
       - '/integration/resources/tls/local.key'
       - '/integration/fixtures/acme/ssl/wildcard.key'
