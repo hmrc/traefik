@@ -8,6 +8,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"time"
+	"os"
+	"io"
 
 	"github.com/beeker1121/goque"
 	"github.com/containous/traefik/middlewares/audittap/configuration"
@@ -38,22 +40,7 @@ func NewHTTPSinkAsync(config *configuration.AuditSink, messageChan chan atypes.E
 		clientVersion = "not-set"
 	}
 
-	caCert, err := ioutil.ReadFile("/etc/ssl/certs/mdtp.pem")
-	if err != nil {
-		log.Info("Error Cert Read ", err)
-	} else {
-		log.Info("Cert:", caCert[0:20])
-	}
-	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM(caCert)
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				RootCAs: caCertPool,
-			},
-		},
-	}
+	var client = CreateClient()
 
 	producers := make([]*httpProducerAsync, 0)
 	q, err := NewQueue(config.DiskStorePath)
@@ -73,6 +60,35 @@ func NewHTTPSinkAsync(config *configuration.AuditSink, messageChan chan atypes.E
 	aas := &httpAuditSinkAsync{cli: client, producers: producers, messages: messageChan, q: q, enc: enc}
 
 	return aas, nil
+}
+
+func CreateClient() (*http.Client) {
+	var certPath = os.Getenv("CERTIFICATEPATH")
+	var client *http.Client
+
+	if len(certPath) > 0 {
+		caCert, err := ioutil.ReadFile(certPath)
+		if err != nil {
+			log.Info("Error Cert Read ", err)
+		} else {
+			log.Info("Cert:", caCert[0:20])
+		}
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
+
+		client = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					RootCAs: caCertPool,
+				},
+			},
+		}
+	} else {
+		log.Warn("No CERTIFICATEPATH env var; reverting to http client")
+		client = &http.Client {} // no certificate specified or cert not found
+	}
+
+	return client
 }
 
 func (aas *httpAuditSinkAsync) Audit(encoded atypes.Encoded) error {
@@ -119,13 +135,19 @@ func (p *httpProducerAsync) audit() {
 	}
 }
 
-func sendRequest(cli *http.Client, endpoint string, encoded atypes.Encoded) {
+func constructRequest(endpoint string, encoded atypes.Encoded) (*http.Request, error) {
 	request, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewBuffer(encoded.Bytes))
 	if err != nil {
 		log.Warn("DS_EventMissed_AuditFailureResponse audit item : " + string(encoded.Bytes)) //TODO is that correct?
+		return nil, err
 	}
 	request.Header.Set("Content-Length", fmt.Sprintf("%d", encoded.Length()))
+	return request, nil
+}
+
+func sendRequest(cli *http.Client, encoded atypes.Encoded, request *http.Request) {
 	res, err := cli.Do(request)
+
 	if err != nil || res.StatusCode > 299 {
 		log.SetFormatter(&log.JSONFormatter{
 			FieldMap: log.FieldMap{
@@ -133,6 +155,12 @@ func sendRequest(cli *http.Client, endpoint string, encoded atypes.Encoded) {
 			},
 		})
 		log.Warn("DS_EventMissed_AuditFailureResponse audit item : " + string(encoded.Bytes))
+		return
+	}
+	defer res.Body.Close()
+	// close the http body before making a new http request: https://golang.cafe/blog/how-to-reuse-http-connections-in-go.html
+	if _, err := io.Copy(ioutil.Discard, res.Body); err != nil {
+		log.Fatal(err)
 	}
 }
 
@@ -164,7 +192,12 @@ func (p *httpProducerAsync) publish() {
 				p.q.EnqueueObject(encoded)
 				return
 			default:
-				sendRequest(p.cli, p.endpoint, encoded)
+				req, err := constructRequest(p.endpoint, encoded)
+				if err != nil {
+					log.Error(err)
+					return
+				}
+				sendRequest(p.cli, encoded, req)
 			}
 		}
 	}
