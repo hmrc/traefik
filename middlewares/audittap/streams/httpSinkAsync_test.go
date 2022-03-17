@@ -7,10 +7,10 @@ import (
 	"github.com/containous/traefik/middlewares/audittap/configuration"
 	atypes "github.com/containous/traefik/middlewares/audittap/types"
 	"github.com/stretchr/testify/assert"
-	"os"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httptrace"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -56,7 +56,6 @@ func TestHttpClientIsAsync(t *testing.T) {
 	var buf bytes.Buffer
 	log.SetOutput(&buf)
 
-
 	stub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		time.Sleep(2000 * time.Millisecond)
 		w.WriteHeader(http.StatusBadGateway)
@@ -75,7 +74,7 @@ func TestHttpClientIsAsync(t *testing.T) {
 	_ = w1.Audit(encodedJSONSample)
 	t2 := time.Now()
 	timeItTook := t2.Sub(t1)
-	assert.True(t, timeItTook < 2000 * time.Millisecond, "The program should complete quicker than 'sleepTime'")
+	assert.True(t, timeItTook < 2000*time.Millisecond, "The program should complete quicker than 'sleepTime'")
 }
 
 /*
@@ -104,7 +103,7 @@ func TestHTTPAsyncConnectionIsReused(t *testing.T) {
 
 	// request 1
 	// construct a request
-	req, err := http.NewRequest("GET", server.URL,nil)
+	req, err := http.NewRequest("GET", server.URL, nil)
 	ok(t, err)
 	reqCtx := req.WithContext(httptrace.WithClientTrace(req.Context(), clientTrace))
 
@@ -112,7 +111,7 @@ func TestHTTPAsyncConnectionIsReused(t *testing.T) {
 	assert.True(t, strings.Contains(buf.String(), "Conn was reused: false"))
 
 	// request 2
-	req2, err2 := http.NewRequest("GET", server.URL,nil)
+	req2, err2 := http.NewRequest("GET", server.URL, nil)
 	ok(t, err2)
 	reqCtx2 := req2.WithContext(httptrace.WithClientTrace(req2.Context(), clientTrace))
 	sendRequest(client, encodedJSONSample, reqCtx2)
