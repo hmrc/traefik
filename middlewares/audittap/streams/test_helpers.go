@@ -1,11 +1,11 @@
 package streams
 
 import (
-"fmt"
-"path/filepath"
-"reflect"
-"runtime"
-"testing"
+	"fmt"
+	"path/filepath"
+	"reflect"
+	"runtime"
+	"testing"
 )
 
 // ok fails the test if an err is not nil.

@@ -5,11 +5,11 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
-	"time"
 	"os"
-	"io"
+	"time"
 
 	"github.com/beeker1121/goque"
 	"github.com/containous/traefik/middlewares/audittap/configuration"
@@ -52,7 +52,7 @@ func NewHTTPSinkAsync(config *configuration.AuditSink, messageChan chan atypes.E
 	return aas, nil
 }
 
-func CreateClient() (*http.Client) {
+func CreateClient() *http.Client {
 	var certPath = os.Getenv("CERTIFICATEPATH")
 	var client *http.Client
 
@@ -76,7 +76,7 @@ func CreateClient() (*http.Client) {
 		}
 	} else {
 		log.Warn("No CERTIFICATEPATH env var; reverting to http client")
-		client = &http.Client {} // no certificate specified or cert not found
+		client = &http.Client{} // no certificate specified or cert not found
 	}
 
 	return client

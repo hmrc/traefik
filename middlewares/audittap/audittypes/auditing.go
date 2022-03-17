@@ -43,7 +43,7 @@ type AuditEvent struct {
 	RequestHeaders  types.DataMap `json:"requestHeaders,omitempty"`
 	RequestPayload  types.DataMap `json:"requestPayload,omitempty"`
 	ResponseHeaders types.DataMap `json:"responseHeaders,omitempty"`
-	Metadata types.DataMap        `json:"metadata,omitempty"`
+	Metadata        types.DataMap `json:"metadata,omitempty"`
 }
 
 // AuditConstraints defines validation constraints an audit event must satisfy
