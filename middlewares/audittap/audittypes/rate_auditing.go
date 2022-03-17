@@ -128,7 +128,7 @@ func (ev *RATEAuditEvent) ToEncoded() types.Encoded {
 // NewRATEAuditEvent creates a new APIAuditEvent with the provided auditSource and auditType
 func NewRATEAuditEvent() Auditer {
 	ev := RATEAuditEvent{}
-	ev.AuditEvent = AuditEvent{AuditSource: "transaction-engine-frontend"}
+	ev.AuditEvent = AuditEvent{AuditSource: "transaction-engine-frontend", Metadata: types.DataMap{keyPublishedByTraefik: true}}
 	return &ev
 }
 

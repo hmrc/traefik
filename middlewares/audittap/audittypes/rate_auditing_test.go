@@ -317,6 +317,14 @@ func TestNewRateAudit(t *testing.T) {
 	}
 }
 
+func TestNewRateAuditMetadata(t *testing.T) {
+	auditer := NewRATEAuditEvent()
+	publishedByTraefik := auditer.(*RATEAuditEvent).Metadata.Get("publishedByTraefik").(bool)
+	if publishedByTraefik != true {
+		t.Errorf("RATEAuditEvent is initialised with wrong 'publishedByTraefik' value, got: %t, want: %t.", publishedByTraefik, true)
+	}
+}
+
 // debugEvent debug utility function to output event JSON structure
 func debugEvent(t *testing.T, ev *RATEAuditEvent) {
 	s := string(ev.ToEncoded().Bytes)

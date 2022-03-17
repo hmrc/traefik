@@ -750,7 +750,14 @@ func (s *Server) initialiseAuditStreams() {
 			if err != nil {
 				log.Fatal("Error creating new AMQP Sink: ", err)
 			}
-			log.Info("Created AMQP Sink")
+			log.Info("Created AMQP  Sink")
+		case "HTTP":
+			messages := make(chan at.Encoded, s.globalConfiguration.AuditSink.ChannelLength)
+			as, err = streams.NewHTTPSinkAsync(s.globalConfiguration.AuditSink, messages)
+			if err != nil {
+				log.Fatal("Error creating new HTTP Sink: ", err)
+			}
+			log.Info("Created HTTP Sink")
 		case "Blackhole":
 			as = streams.NewBlackholeSink()
 			log.Info("Created Blackhole Sink")

@@ -18,8 +18,9 @@ import (
 )
 
 const (
-	keyPayloadContents = "contents"
-	keyPayloadLength   = "length"
+	keyPayloadContents    = "contents"
+	keyPayloadLength      = "length"
+	keyPublishedByTraefik = "publishedByTraefik"
 )
 
 // AuditEvent captures the content and metadata of an HTTP request and response.
@@ -42,6 +43,7 @@ type AuditEvent struct {
 	RequestHeaders  types.DataMap `json:"requestHeaders,omitempty"`
 	RequestPayload  types.DataMap `json:"requestPayload,omitempty"`
 	ResponseHeaders types.DataMap `json:"responseHeaders,omitempty"`
+	Metadata types.DataMap        `json:"metadata,omitempty"`
 }
 
 // AuditConstraints defines validation constraints an audit event must satisfy
