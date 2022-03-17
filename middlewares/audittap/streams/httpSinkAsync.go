@@ -26,7 +26,7 @@ type httpAuditSinkAsync struct {
 	enc       encryption.Encrypter
 }
 
-// NewHttpSink returns an AuditSink for sending messages to Datastream service.
+// NewHTTPSinkAsync returns an AuditSink for sending messages to Datastream service.
 // A connection is made to the specified endpoint and a number of Producers
 // each backed by a channel are created, ready to send messages.
 func NewHTTPSinkAsync(config *configuration.AuditSink, messageChan chan atypes.Encoded) (sink AuditSink, err error) {
@@ -43,7 +43,7 @@ func NewHTTPSinkAsync(config *configuration.AuditSink, messageChan chan atypes.E
 		return nil, err
 	}
 	for i := 0; i < config.NumProducers; i++ {
-		p, _ := newHttpProducerAsync(client, config.Endpoint, messageChan, q, enc)
+		p, _ := newHTTPProducerAsync(client, config.Endpoint, messageChan, q, enc)
 		producers = append(producers, p)
 	}
 
@@ -52,6 +52,9 @@ func NewHTTPSinkAsync(config *configuration.AuditSink, messageChan chan atypes.E
 	return aas, nil
 }
 
+// CreateClient returns an http client which may or maynot be configured with a certficate.
+// Certificate can be supplied by exporting the absolute path to the certificate as an environment variable
+// called CERTIFICATEPATH
 func CreateClient() *http.Client {
 	var certPath = os.Getenv("CERTIFICATEPATH")
 	var client *http.Client
@@ -108,7 +111,7 @@ type httpProducerAsync struct {
 	enc      encryption.Encrypter
 }
 
-func newHttpProducerAsync(client *http.Client, endpoint string, messages chan atypes.Encoded, q *goque.Queue, enc encryption.Encrypter) (*httpProducerAsync, error) {
+func newHTTPProducerAsync(client *http.Client, endpoint string, messages chan atypes.Encoded, q *goque.Queue, enc encryption.Encrypter) (*httpProducerAsync, error) {
 	stop := make(chan bool)
 	producer := &httpProducerAsync{cli: client, endpoint: endpoint, messages: messages, q: q, stop: stop, enc: enc}
 	go producer.audit()

@@ -77,13 +77,6 @@ func TestHttpClientIsAsync(t *testing.T) {
 	assert.True(t, timeItTook < 2000*time.Millisecond, "The program should complete quicker than 'sleepTime'")
 }
 
-/*
- * Do to the limitations of Go 1.12 there is no obvious way (to me) to be able to test the code in the way one
- * would like. The issue is that http and httptrace are different interfaces, so the clientTrace object can be
- * used within the NewHTTPSinkAsync as part of the config. So instead this test reflects the behaviour which is
- * applied in the code base to allow for http connections to be reused. New versions of Go (from 1.13) support a
- * method called NewRequestWithContext which would allow the context to be overriden in the tests.
- */
 func TestHTTPAsyncConnectionIsReused(t *testing.T) {
 	var buf bytes.Buffer
 	log.SetOutput(&buf)
