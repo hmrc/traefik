@@ -30,16 +30,6 @@ type httpAuditSinkAsync struct {
 // A connection is made to the specified endpoint and a number of Producers
 // each backed by a channel are created, ready to send messages.
 func NewHTTPSinkAsync(config *configuration.AuditSink, messageChan chan atypes.Encoded) (sink AuditSink, err error) {
-	clientID := config.ClientID
-	if clientID == "" {
-		clientID = "hmrc-traefik-" + config.ProxyingFor
-	}
-
-	clientVersion := config.ClientVersion
-	if clientVersion == "" {
-		clientVersion = "not-set"
-	}
-
 	var client = CreateClient()
 
 	producers := make([]*httpProducerAsync, 0)
@@ -69,7 +59,8 @@ func CreateClient() (*http.Client) {
 	if len(certPath) > 0 {
 		caCert, err := ioutil.ReadFile(certPath)
 		if err != nil {
-			log.Info("Error Cert Read ", err)
+			log.Error("Error Cert Read ", err)
+			os.Exit(1)
 		} else {
 			log.Info("Cert:", caCert[0:20])
 		}
@@ -146,14 +137,15 @@ func constructRequest(endpoint string, encoded atypes.Encoded) (*http.Request, e
 }
 
 func sendRequest(cli *http.Client, encoded atypes.Encoded, request *http.Request) {
+	log.SetFormatter(&log.JSONFormatter{
+		FieldMap: log.FieldMap{
+			log.FieldKeyMsg: "message",
+		},
+	})
+
 	res, err := cli.Do(request)
 
 	if err != nil || res.StatusCode > 299 {
-		log.SetFormatter(&log.JSONFormatter{
-			FieldMap: log.FieldMap{
-				log.FieldKeyMsg: "message",
-			},
-		})
 		log.Warn("DS_EventMissed_AuditFailureResponse audit item : " + string(encoded.Bytes))
 		return
 	}

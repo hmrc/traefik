@@ -46,6 +46,7 @@ func TestLogEventsOnNon200Response(t *testing.T) {
 	messages := make(chan atypes.Encoded, 1)
 	w1, _ := NewHTTPSinkAsync(&config, messages)
 	_ = w1.Audit(encodedJSONSample)
+
 	time.Sleep(1000 * time.Millisecond)
 	assert.True(t, strings.Contains(buf.String(), `{"level":"warning","message":"DS_EventMissed_AuditFailureResponse audit item : [1,2,3]"`))
 }
@@ -55,11 +56,9 @@ func TestHttpClientIsAsync(t *testing.T) {
 	var buf bytes.Buffer
 	log.SetOutput(&buf)
 
-	var sleepTime time.Duration
-	sleepTime = 2000 * time.Millisecond
 
 	stub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		time.Sleep(sleepTime)
+		time.Sleep(2000 * time.Millisecond)
 		w.WriteHeader(http.StatusBadGateway)
 	}))
 	defer stub.Close()
@@ -76,7 +75,7 @@ func TestHttpClientIsAsync(t *testing.T) {
 	_ = w1.Audit(encodedJSONSample)
 	t2 := time.Now()
 	timeItTook := t2.Sub(t1)
-	assert.True(t, timeItTook < sleepTime, "The program should complete quicker than 'sleepTime'")
+	assert.True(t, timeItTook < 2000 * time.Millisecond, "The program should complete quicker than 'sleepTime'")
 }
 
 /*
