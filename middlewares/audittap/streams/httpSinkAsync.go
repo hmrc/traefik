@@ -147,12 +147,14 @@ func sendRequest(cli *http.Client, encoded atypes.Encoded, request *http.Request
 	})
 
 	res, err := cli.Do(request)
+	if res != nil {
+		defer res.Body.Close()
+	}
 
 	if err != nil || res.StatusCode > 299 {
 		log.Warn("DS_EventMissed_AuditFailureResponse audit item : " + string(encoded.Bytes))
 		return
 	}
-	defer res.Body.Close()
 	// close the http body before making a new http request: https://golang.cafe/blog/how-to-reuse-http-connections-in-go.html
 	if _, err := io.Copy(ioutil.Discard, res.Body); err != nil {
 		log.Fatal(err)
