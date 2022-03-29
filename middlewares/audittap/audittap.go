@@ -17,7 +17,6 @@ import (
 const (
 	RATE = "rate"
 	API  = "api"
-	MDTP = "mdtp"
 )
 
 // AuditConfig specifies audit construction characteristics
@@ -69,12 +68,12 @@ func NewAuditTap(config *configuration.AuditSink, streams []audittypes.AuditStre
 	}
 
 	pf := strings.ToLower(config.ProxyingFor)
-	if pf != MDTP && pf != API && pf != RATE {
+	if pf != API && pf != RATE {
 		return nil, fmt.Errorf(fmt.Sprintf("ProxyingFor value '%s' is invalid", config.ProxyingFor))
 	}
 
 	// RATE values are either constant or chosen dynamically
-	if pf != RATE && pf != MDTP {
+	if pf != RATE {
 		if config.AuditSource == "" {
 			return nil, fmt.Errorf("AuditSource not set in configuration")
 		}
@@ -154,8 +153,6 @@ func (tap *AuditTap) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			auditer = audittypes.NewAPIAuditEvent(tap.AuditSource, tap.AuditType)
 		case "rate":
 			auditer = audittypes.NewRATEAuditEvent()
-		case "mdtp":
-			auditer = audittypes.NewMdtpAuditEvent()
 		}
 		auditer.AppendRequest(ctx, &tap.AuditSpecification)
 	}
