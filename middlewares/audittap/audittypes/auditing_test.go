@@ -320,7 +320,6 @@ func TestShouldCaptureRequestBody(t *testing.T) {
 	filters := []*Filter{
 		{Source: "Host", Contains: []string{"somehostname", "hostinc"}},
 		{Source: "Host", Matches: []*regexp.Regexp{
-			regexp.MustCompile(".*\\.public.mdtp"),
 			regexp.MustCompile(".*\\.random\\.com")}},
 	}
 
@@ -332,13 +331,6 @@ func TestShouldCaptureRequestBody(t *testing.T) {
 	hostinc.Req.Host = "abchostincdef.somedomain"
 	assert.True(t, ShouldCaptureRequestBody(hostinc, spec))
 
-	mdtppub := NewRequestContext(httptest.NewRequest("", "/pathsegment?d=1&e=2", nil))
-	mdtppub.Req.Host = "someapp.public.mdtp"
-	assert.True(t, ShouldCaptureRequestBody(hostinc, spec))
-
-	mdtpprotect := NewRequestContext(httptest.NewRequest("", "/pathsegment?d=1&e=2", nil))
-	mdtpprotect.Req.Host = "someapp.protected.mdtp"
-	assert.False(t, ShouldCaptureRequestBody(mdtpprotect, spec))
 }
 
 func TestShouldIgnoreRequestBody(t *testing.T) {
@@ -374,13 +366,8 @@ func TestSatisfiesFilter(t *testing.T) {
 }
 
 func TestShouldSatisfyFilterRegex(t *testing.T) {
-
-	mdtpURLPattern := regexp.MustCompile("http(s)?:\\/\\/.*\\.(service|mdtp)($|[:\\/])")
 	assert.True(t, filterSatisfies(Filter{Source: "x", Matches: []*regexp.Regexp{regexp.MustCompile("^begin.*")}}, "beginWithThis"))
-	assert.True(t, filterSatisfies(Filter{Source: "x", Matches: []*regexp.Regexp{mdtpURLPattern}}, "http://auth.service/auth/authority"))
-
 	assert.False(t, filterSatisfies(Filter{Source: "x", Matches: []*regexp.Regexp{regexp.MustCompile("abcde")}}, "abcdx"))
-	assert.False(t, filterSatisfies(Filter{Source: "x", Matches: []*regexp.Regexp{mdtpURLPattern}}, "http://auth.com/auth/authority"))
 }
 
 func filterSatisfies(f Filter, s string) bool {

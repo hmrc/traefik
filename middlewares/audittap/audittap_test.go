@@ -86,12 +86,6 @@ func TestApiProxyingFor(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestMdtpProxyingFor(t *testing.T) {
-	capture := &noopAuditStream{}
-	_, err := NewAuditTap(&configuration.AuditSink{ProxyingFor: "MDTP"}, []audittypes.AuditStream{capture}, "backend1", http.HandlerFunc(notFound))
-	assert.NoError(t, err)
-}
-
 func TestAuditConstraintDefaults(t *testing.T) {
 	capture := &noopAuditStream{}
 	tap, err := NewAuditTap(&configuration.AuditSink{ProxyingFor: "Rate"}, []audittypes.AuditStream{capture}, "backend1", http.HandlerFunc(notFound))
