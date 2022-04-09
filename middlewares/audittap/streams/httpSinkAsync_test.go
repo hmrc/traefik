@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"fmt"
 )
 
 func TestLogEventsOnNon200Response(t *testing.T) {
@@ -56,9 +57,9 @@ func TestHttpClientIsAsync(t *testing.T) {
 	var buf bytes.Buffer
 	log.SetOutput(&buf)
 
-	stub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	stub := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		time.Sleep(2000 * time.Millisecond)
-		w.WriteHeader(http.StatusBadGateway)
+		rw.WriteHeader(http.StatusBadGateway)
 	}))
 	defer stub.Close()
 
@@ -130,3 +131,63 @@ func TestCreateClientWithCert(t *testing.T) {
 
 	assert.True(t, strings.Contains(buf.String(), "Cert:[45 45 45 45 45 66 69 71 73 78 32 80 82 73 86 65 84 69 32 75]"))
 }
+
+
+// make a request to an endpoint which doesn't exist and ensure that it fails fast and writes to stdout
+func TestHTTPNotFoundRevertToStdOut(t *testing.T) {
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+
+	// create a mock server returning 404
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		rw.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	var config = configuration.AuditSink{
+		Endpoint:      server.URL,
+		Destination:   "bar",
+		DiskStorePath: "/tmp/test",
+		NumProducers:  1,
+	}
+	messages := make(chan atypes.Encoded, 1)
+	w1, _ := NewHTTPSinkAsync(&config, messages)
+	t1 := time.Now()
+	_ = w1.Audit(encodedJSONSample)
+	t2 := time.Now()
+	timeItTook := t2.Sub(t1)
+	assert.True(t, timeItTook < 100*time.Millisecond, "The program should write to stdout in under 100 milli-secs if destination not found")
+
+	time.Sleep(1000 * time.Millisecond)
+	assert.True(t, strings.Contains(buf.String(), `{"level":"warning","message":"DS_EventMissed_AuditFailureResponse audit item : [1,2,3]"`))
+}
+
+func TestHTTPDelayRevertToStdOut(t *testing.T) {
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+
+	// create a mock server and delay the http.response
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		time.Sleep(5 * time.Second)
+		rw.WriteHeader(http.StatusBadGateway)
+	}))
+	defer server.Close()
+
+	var config = configuration.AuditSink{
+		Endpoint:      server.URL,
+		Destination:   "bar",
+		DiskStorePath: "/tmp/test",
+		NumProducers:  1,
+	}
+	messages := make(chan atypes.Encoded, 1)
+	w1, _ := NewHTTPSinkAsync(&config, messages)
+	t1 := time.Now()
+	_ = w1.Audit(encodedJSONSample)
+	t2 := time.Now()
+	timeItTook := t2.Sub(t1)
+	assert.True(t, timeItTook < 100*time.Millisecond, "The program should write to stdout in under 100 milli-secs if destination not found")
+
+	time.Sleep(200 * time.Millisecond)
+	assert.True(t, strings.Contains(buf.String(), `{"level":"warning","message":"DS_EventMissed_AuditFailureResponse audit item : [1,2,3]"`))
+}
+
