@@ -58,6 +58,7 @@ func NewHTTPSinkAsync(config *configuration.AuditSink, messageChan chan atypes.E
 func CreateClient() *http.Client {
 	var certPath = os.Getenv("CERTIFICATEPATH")
 	var client *http.Client
+	var httpClientTimeout = 1 * time.Second
 
 	if len(certPath) > 0 {
 		caCert, err := ioutil.ReadFile(certPath)
@@ -76,10 +77,15 @@ func CreateClient() *http.Client {
 					RootCAs: caCertPool,
 				},
 			},
+			Timeout: httpClientTimeout,
 		}
+		log.Info("HTTP Client timeout: ", client.Timeout.String())
 	} else {
 		log.Warn("No CERTIFICATEPATH env var; reverting to http client")
-		client = &http.Client{} // no certificate specified or cert not found
+		client = &http.Client{
+			Timeout: httpClientTimeout,
+		} // no certificate specified or cert not found
+		log.Info("HTTP Client timeout: ", client.Timeout.String())
 	}
 
 	return client
