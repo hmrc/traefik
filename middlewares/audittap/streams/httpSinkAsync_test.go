@@ -14,7 +14,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"fmt"
 )
 
 func TestLogEventsOnNon200Response(t *testing.T) {
@@ -132,7 +131,6 @@ func TestCreateClientWithCert(t *testing.T) {
 	assert.True(t, strings.Contains(buf.String(), "Cert:[45 45 45 45 45 66 69 71 73 78 32 80 82 73 86 65 84 69 32 75]"))
 }
 
-
 // make a request to an endpoint which doesn't exist and ensure that it fails fast and writes to stdout
 func TestHTTPNotFoundRevertToStdOut(t *testing.T) {
 	var buf bytes.Buffer
@@ -190,4 +188,3 @@ func TestHTTPDelayRevertToStdOut(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 	assert.True(t, strings.Contains(buf.String(), `{"level":"warning","message":"DS_EventMissed_AuditFailureResponse audit item : [1,2,3]"`))
 }
-
