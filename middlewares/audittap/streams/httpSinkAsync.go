@@ -109,12 +109,13 @@ func (aas *httpAuditSinkAsync) Close() error {
 }
 
 type httpProducerAsync struct {
-	cli      *http.Client
-	endpoint string
-	messages chan atypes.Encoded
-	q        *goque.Queue
-	stop     chan bool
-	enc      encryption.Encrypter
+	cli         *http.Client
+	endpoint    string
+	proxyingFor string
+	messages    chan atypes.Encoded
+	q           *goque.Queue
+	stop        chan bool
+	enc         encryption.Encrypter
 }
 
 func newHTTPProducerAsync(client *http.Client, endpoint string, messages chan atypes.Encoded, q *goque.Queue, enc encryption.Encrypter) (*httpProducerAsync, error) {
@@ -135,13 +136,14 @@ func (p *httpProducerAsync) audit() {
 	}
 }
 
-func constructRequest(endpoint string, encoded atypes.Encoded) (*http.Request, error) {
+func constructRequest(endpoint string, proxyingFor string, encoded atypes.Encoded) (*http.Request, error) {
 	request, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewBuffer(encoded.Bytes))
 	if err != nil {
-		log.Warn("DS_EventMissed_AuditFailureResponse audit item : " + string(encoded.Bytes)) //TODO is that correct?
+		log.Warn("DS_EventMissed_AuditFailureResponse audit item : " + string(encoded.Bytes))
 		return nil, err
 	}
 	request.Header.Set("Content-Length", fmt.Sprintf("%d", encoded.Length()))
+	request.Header.Set("User-Agent", proxyingFor)
 	return request, nil
 }
 
@@ -195,7 +197,7 @@ func (p *httpProducerAsync) publish() {
 				p.q.EnqueueObject(encoded)
 				return
 			default:
-				req, err := constructRequest(p.endpoint, encoded)
+				req, err := constructRequest(p.endpoint, p.proxyingFor, encoded)
 				if err != nil {
 					log.Error(err)
 					return
