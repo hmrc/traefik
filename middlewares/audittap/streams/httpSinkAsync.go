@@ -43,7 +43,7 @@ func NewHTTPSinkAsync(config *configuration.AuditSink, messageChan chan atypes.E
 		return nil, err
 	}
 	for i := 0; i < config.NumProducers; i++ {
-		p, _ := newHTTPProducerAsync(client, config.Endpoint, messageChan, q, enc)
+		p, _ := newHTTPProducerAsync(client, config.Endpoint, config.ProxyingFor, messageChan, q, enc)
 		producers = append(producers, p)
 	}
 
@@ -118,9 +118,9 @@ type httpProducerAsync struct {
 	enc         encryption.Encrypter
 }
 
-func newHTTPProducerAsync(client *http.Client, endpoint string, messages chan atypes.Encoded, q *goque.Queue, enc encryption.Encrypter) (*httpProducerAsync, error) {
+func newHTTPProducerAsync(client *http.Client, endpoint string, proxyingFor string, messages chan atypes.Encoded, q *goque.Queue, enc encryption.Encrypter) (*httpProducerAsync, error) {
 	stop := make(chan bool)
-	producer := &httpProducerAsync{cli: client, endpoint: endpoint, messages: messages, q: q, stop: stop, enc: enc}
+	producer := &httpProducerAsync{cli: client, endpoint: endpoint, proxyingFor: proxyingFor, messages: messages, q: q, stop: stop, enc: enc}
 	go producer.audit()
 	go producer.publish()
 	return producer, nil
