@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -18,12 +19,25 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const undeliveredMessagePrefix = "DS_EventMissed_AuditFailureResponse audit item : "
+
 type httpAuditSinkAsync struct {
 	cli       *http.Client
 	messages  chan atypes.Encoded
 	producers []*httpProducerAsync
 	q         *goque.Queue
 	enc       encryption.Encrypter
+}
+
+type auditDescription struct {
+	EventID     string `json:"eventId"`
+	AuditSource string `json:"auditSource"`
+	AuditType   string `json:"auditType"`
+}
+
+// NewQueue is a wrapper for calling cony.NewPublisher
+var NewQueue = func(queueLocation string) (*goque.Queue, error) {
+	return goque.OpenQueue(queueLocation)
 }
 
 // NewHTTPSinkAsync returns an AuditSink for sending messages to Datastream service.
@@ -95,7 +109,7 @@ func (aas *httpAuditSinkAsync) Audit(encoded atypes.Encoded) error {
 	select {
 	case aas.messages <- encoded:
 	default:
-		handleFailedMessage(encoded, "channel full", aas.enc)
+		handleFailedMessage(encoded, aas.enc)
 	}
 	return nil
 }
@@ -131,7 +145,7 @@ func (p *httpProducerAsync) audit() {
 		encoded := <-p.messages
 		_, err := p.q.EnqueueObject(encoded)
 		if err != nil {
-			handleFailedMessage(encoded, "enqueue failed", p.enc)
+			handleFailedMessage(encoded, p.enc)
 		}
 	}
 }
@@ -139,7 +153,7 @@ func (p *httpProducerAsync) audit() {
 func constructRequest(endpoint string, proxyingFor string, encoded atypes.Encoded) (*http.Request, error) {
 	request, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewBuffer(encoded.Bytes))
 	if err != nil {
-		log.Warn("DS_EventMissed_AuditFailureResponse audit item : " + string(encoded.Bytes))
+		log.Warn(undeliveredMessagePrefix + string(encoded.Bytes))
 		return nil, err
 	}
 	request.Header.Set("Content-Length", fmt.Sprintf("%d", encoded.Length()))
@@ -160,7 +174,7 @@ func sendRequest(cli *http.Client, encoded atypes.Encoded, request *http.Request
 	}
 
 	if err != nil || res.StatusCode > 299 {
-		log.Warn("DS_EventMissed_AuditFailureResponse audit item : " + string(encoded.Bytes))
+		log.Warn(undeliveredMessagePrefix + string(encoded.Bytes))
 		return
 	}
 	// close the http body before making a new http request: https://golang.cafe/blog/how-to-reuse-http-connections-in-go.html
@@ -205,5 +219,26 @@ func (p *httpProducerAsync) publish() {
 				sendRequest(p.cli, encoded, req)
 			}
 		}
+	}
+}
+
+func minimallyDescribeAudit(encoded atypes.Encoded) (auditDescription, error) {
+	var data auditDescription
+	err := json.Unmarshal(encoded.Bytes, &data)
+	return data, err
+}
+
+func handleFailedMessage(encoded atypes.Encoded, crypter encryption.Encrypter) {
+	// Assume an indescribable event would be rejected by Datastream
+	if desc, err := minimallyDescribeAudit(encoded); err == nil {
+		if _, err := crypter.Encrypt(encoded.Bytes); err == nil {
+			log.Warn(undeliveredMessagePrefix + string(encoded.Bytes))
+		} else {
+			// Datastream would drop for an encryption failure
+			log.Error(fmt.Sprintf("Dropping unencrypted event. eventId=%s auditSource=%s auditType=%s",
+				desc.EventID, desc.AuditSource, desc.AuditType))
+		}
+	} else {
+		log.Error(fmt.Sprintf("Dropping invalid audit event. %s", err.Error()))
 	}
 }
