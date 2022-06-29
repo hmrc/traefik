@@ -270,14 +270,6 @@
   revision = "48572f11356f1843b694f21a290d4f1006bc5e47"
 
 [[projects]]
-  digest = "1:59707dc65748437f08637bf4646627e550296e4d131871c198c0e52691fe98e7"
-  name = "github.com/assembla/cony"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "dd62697b0adb9adfda8589520cb85f4cbc2361f1"
-  version = "v0.3.2"
-
-[[projects]]
   digest = "1:bd56ffde8e12e9faca92f3ac54347c665d931856fba8784007b02e004fbcc30d"
   name = "github.com/aws/aws-sdk-go"
   packages = [
