@@ -277,10 +277,6 @@
   version = "v1.12.0"
 
 [[constraint]]
-  name = "github.com/assembla/cony"
-  version = "v0.3.2"
-
-[[constraint]]
   name = "github.com/streadway/amqp"
   branch = "master"
 
