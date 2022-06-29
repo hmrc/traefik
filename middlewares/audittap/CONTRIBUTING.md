@@ -9,10 +9,6 @@ As of Traefik v1.5 [dep](https://github.com/golang/dep "Go dep repository") is u
   version = "v1.12.0"
 
 [[constraint]]
-  name = "github.com/assembla/cony"
-  version = "v0.3.2"
-
-[[constraint]]
   name = "github.com/streadway/amqp"
   branch = "master"
 
