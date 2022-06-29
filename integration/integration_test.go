@@ -59,7 +59,6 @@ func Test(t *testing.T) {
 		check.Suite(&TimeoutSuite{})
 		check.Suite(&TracingSuite{})
 		check.Suite(&WebsocketSuite{})
-		check.Suite(&RabbitMQSuite{})
 	}
 	if *host {
 		// tests launched from the host

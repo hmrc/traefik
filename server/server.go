@@ -744,13 +744,6 @@ func (s *Server) initialiseAuditStreams() {
 		var err error
 
 		switch s.globalConfiguration.AuditSink.Type {
-		case "AMQP":
-			messages := make(chan at.Encoded, s.globalConfiguration.AuditSink.ChannelLength)
-			as, err = streams.NewAmqpSink(s.globalConfiguration.AuditSink, messages)
-			if err != nil {
-				log.Fatal("Error creating new AMQP Sink: ", err)
-			}
-			log.Info("Created AMQP  Sink")
 		case "HTTP":
 			messages := make(chan at.Encoded, s.globalConfiguration.AuditSink.ChannelLength)
 			as, err = streams.NewHTTPSinkAsync(s.globalConfiguration.AuditSink, messages)

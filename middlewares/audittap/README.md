@@ -7,8 +7,8 @@ An example follows
 
 ```
 [auditSink]
-  type = "AMQP"
-  endpoint = "amqp://localhost:5672/"
+  type = "HTTP"
+  endpoint = "http://localhost:8080/"
   destination = "audit"
   numProducers = 1
   channelLength = 1
@@ -55,7 +55,7 @@ requestBodyCaptures
 
 The properties are as follow:
 
-* type (mandatory): the type of sink audit events will be published to. Can be AMQP|Blackhole
+* type (mandatory): the type of sink audit events will be published to. Can be HTTP|Blackhole
 * proxyingFor (mandatory): determines the auditing style. Values can be API or RATE or MDTP
 * auditSource (mandatory for API): the auditSource value to be included in API audit events
 * auditType (mandatory for API): the auditType value to be included in API audit events
