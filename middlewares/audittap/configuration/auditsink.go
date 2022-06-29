@@ -49,11 +49,11 @@ type AuditSink struct {
 	Exclusions               Exclusions          `json:"exclusions,omitempty"`
 	RequestBodyCaptures      RequestBodyCaptures `json:"requestBodyCaptures,omitempty"`
 	RequestBodyIgnores       RequestBodyIgnores  `json:"requestBodyIgnores,omitempty"`
-	Type                     string              `json:"type,omitempty" description:"The type of sink: File/HTTP/Kafka/AMQP/Blackhole"`
+	Type                     string              `json:"type,omitempty" description:"The type of sink: File/HTTP/Kafka/Blackhole"`
 	ClientID                 string              `json:"clientId,omitempty" description:"Identifier to be used for the sink client"`
 	ClientVersion            string              `json:"clientVersion,omitempty" description:"Version info to identify the sink client"`
-	Endpoint                 string              `json:"endpoint,omitempty" description:"Endpoint for audit tap. e.g. url for HTTP/Kafka/AMQP or filename for File"`
-	Destination              string              `json:"destination,omitempty" description:"For Kafka the topic, AMQP the exchange etc."`
+	Endpoint                 string              `json:"endpoint,omitempty" description:"Endpoint for audit tap. e.g. url for HTTP/Kafka/HTTP or filename for File"`
+	Destination              string              `json:"destination,omitempty" description:"For Kafka the topic etc."`
 	MaxEntityLength          string              `json:"maxEntityLength,omitempty" description:"MaxEntityLength truncates entities (bodies) longer than this (units are allowed, eg. 32KiB)"`
 	NumProducers             int                 `json:"numProducers,omitempty" description:"The number of concurrent producers which can send messages to the endpoint"`
 	ChannelLength            int                 `json:"channelLength,omitempty" description:"Size of the in-memory message channel.  Used as a buffer in case of Producer failure"`

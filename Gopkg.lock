@@ -1851,14 +1851,6 @@
   revision = "cb88ea77998c3f024757528e3305022ab50b43be"
 
 [[projects]]
-  branch = "master"
-  digest = "1:d8ebd7ca7cfc33bbf8a5c9588d8ae1d47d590d4f82a199efa0e81eb72aa7fbee"
-  name = "github.com/streadway/amqp"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "e5adc2ada8b8efff032bf61173a233d143e9318e"
-
-[[projects]]
   digest = "1:10301358a67805684f6b525cba6ad7ec014dbd56cccc2926fadc9189faa7889a"
   name = "github.com/stretchr/objx"
   packages = ["."]
@@ -2779,7 +2771,6 @@
     "github.com/satori/go.uuid",
     "github.com/shopspring/decimal",
     "github.com/sirupsen/logrus",
-    "github.com/streadway/amqp",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/mock",
     "github.com/stretchr/testify/require",
