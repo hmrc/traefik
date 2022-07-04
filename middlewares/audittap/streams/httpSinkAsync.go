@@ -109,7 +109,7 @@ func (aas *httpAuditSinkAsync) Audit(encoded atypes.Encoded) error {
 	select {
 	case aas.messages <- encoded:
 	default:
-		handleFailedMessage(encoded, aas.enc)
+		handleFailedMessage(encoded)
 	}
 	return nil
 }
@@ -145,7 +145,7 @@ func (p *httpProducerAsync) audit() {
 		encoded := <-p.messages
 		_, err := p.q.EnqueueObject(encoded)
 		if err != nil {
-			handleFailedMessage(encoded, p.enc)
+			handleFailedMessage(encoded)
 		}
 	}
 }
@@ -153,7 +153,7 @@ func (p *httpProducerAsync) audit() {
 func constructRequest(endpoint string, proxyingFor string, encoded atypes.Encoded) (*http.Request, error) {
 	request, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewBuffer(encoded.Bytes))
 	if err != nil {
-		log.Warn(undeliveredMessagePrefix + string(encoded.Bytes))
+		handleFailedMessage(encoded)
 		return nil, err
 	}
 	request.Header.Set("Content-Length", fmt.Sprintf("%d", encoded.Length()))
@@ -174,7 +174,7 @@ func sendRequest(cli *http.Client, encoded atypes.Encoded, request *http.Request
 	}
 
 	if err != nil || res.StatusCode > 299 {
-		log.Warn(undeliveredMessagePrefix + string(encoded.Bytes))
+		handleFailedMessage(encoded)
 		return
 	}
 	// close the http body before making a new http request: https://golang.cafe/blog/how-to-reuse-http-connections-in-go.html
@@ -228,17 +228,6 @@ func minimallyDescribeAudit(encoded atypes.Encoded) (auditDescription, error) {
 	return data, err
 }
 
-func handleFailedMessage(encoded atypes.Encoded, crypter encryption.Encrypter) {
-	// Assume an indescribable event would be rejected by Datastream
-	if desc, err := minimallyDescribeAudit(encoded); err == nil {
-		if _, err := crypter.Encrypt(encoded.Bytes); err == nil {
-			log.Warn(undeliveredMessagePrefix + string(encoded.Bytes))
-		} else {
-			// Datastream would drop for an encryption failure
-			log.Error(fmt.Sprintf("Dropping unencrypted event. eventId=%s auditSource=%s auditType=%s",
-				desc.EventID, desc.AuditSource, desc.AuditType))
-		}
-	} else {
-		log.Error(fmt.Sprintf("Dropping invalid audit event. %s", err.Error()))
-	}
+func handleFailedMessage(encoded atypes.Encoded) {
+	log.Warn(undeliveredMessagePrefix + string(encoded.Bytes))
 }
