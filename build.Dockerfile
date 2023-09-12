@@ -5,9 +5,6 @@ RUN apk --update upgrade \
     && update-ca-certificates \
     && rm -rf /var/cache/apk/*
 
-RUN go get golang.org/x/lint/golint \
-&& go get github.com/client9/misspell/cmd/misspell
-
 # Which docker version to test on
 ARG DOCKER_VERSION=18.09.7
 ARG DEP_VERSION=0.5.4
