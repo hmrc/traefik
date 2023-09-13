@@ -64,7 +64,7 @@ func TestInvalidProxyingForRequired(t *testing.T) {
 	capture := &noopAuditStream{}
 	_, err := NewAuditTap(&configuration.AuditSink{}, []audittypes.AuditStream{capture}, "backend1", http.HandlerFunc(notFound))
 	assert.Error(t, err)
-	_, err = NewAuditTap(&configuration.AuditSink{ProxyingFor: "IPA"}, []audittypes.AuditStream{capture}, "backend1", http.HandlerFunc(notFound))
+	_, err = NewAuditTap(&configuration.AuditSink{ProxyingFor: "API"}, []audittypes.AuditStream{capture}, "backend1", http.HandlerFunc(notFound))
 	assert.Error(t, err)
 }
 

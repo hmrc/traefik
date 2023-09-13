@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -196,13 +195,14 @@ func (p *httpProducerAsync) publish() {
 					continue
 				}
 				// now? nothing to see here ... Should only happen if reference to goque.q is "closed"
-				log.Error(err)
+				log.Error("httpProducerAsync: deque failed")
+
 				continue
 			}
 			var encoded atypes.Encoded
 			if err = item.ToObject(&encoded); err != nil {
 				// well, that didn't work
-				log.Error(err)
+				log.Error("httpProducerAsync: failed to parse item into recognised type")
 			}
 
 			select {
@@ -213,19 +213,13 @@ func (p *httpProducerAsync) publish() {
 			default:
 				req, err := constructRequest(p.endpoint, p.proxyingFor, encoded)
 				if err != nil {
-					log.Error(err)
+					log.Error("httpProducerAsync: unable to construct request")
 					return
 				}
 				sendRequest(p.cli, encoded, req)
 			}
 		}
 	}
-}
-
-func minimallyDescribeAudit(encoded atypes.Encoded) (auditDescription, error) {
-	var data auditDescription
-	err := json.Unmarshal(encoded.Bytes, &data)
-	return data, err
 }
 
 func handleFailedMessage(encoded atypes.Encoded) {
