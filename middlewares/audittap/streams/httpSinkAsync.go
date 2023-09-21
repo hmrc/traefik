@@ -18,7 +18,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const undeliveredMessagePrefix = "DS_EventMissed_AuditFailureResponse audit item : "
+const undeliveredMessagePrefix = "DS_EventMissed_AuditFailureResponse"
 
 type httpAuditSinkAsync struct {
 	cli       *http.Client
@@ -223,5 +223,5 @@ func (p *httpProducerAsync) publish() {
 }
 
 func handleFailedMessage(encoded atypes.Encoded) {
-	log.Warn(undeliveredMessagePrefix + string(encoded.Bytes))
+	log.Warn(undeliveredMessagePrefix)
 }
