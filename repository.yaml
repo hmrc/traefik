@@ -103,19 +103,15 @@ leakDetectionExemptions:
       - '/vendor/golang.org/x/net/ipv4/doc.go'
       - '/server/header_rewriter_test.go'
       - '/server/server_test.go'
-
       # our modifications
       - '/middlewares/audittap/audittypes/rate_auditing_test.go'
       - '/middlewares/audittap/audittypes/mdtp_auditing_test.go'
       - '/middlewares/audittap/audittypes/auditing_test.go'
-
-
   - ruleId: 'filename_private_key_5'
     filePaths:
       - '/integration/fixtures/tlsclientheaders/root.pem'
       - '/integration/fixtures/tlsclientheaders/server.pem'
       - '/integration/fixtures/acme/ssl/pebble.minica.pem'
-
   - ruleId: 'cert_1'
     filePaths:
       # from upstream
@@ -144,15 +140,13 @@ leakDetectionExemptions:
       - '/provider/kubernetes/kubernetes_test.go'
       - '/docs/user-guide/kv-config.md'
     text: 'PRIVATE KEY'
-
   - ruleId: 'aws_2'
     filePaths:
       # from upstream
       - '/vendor/github.com/aws/aws-sdk-go/service/ecs/api.go'
-      
   - ruleId: 'aws_secret_access_key'
     filePaths:
       - '/docs/configuration/backends/rancher.md'
     text: 'secretKey'
-
-repoVisibility: public_0C3F0CE3E6E6448FAD341E7BFA50FCD333E06A20CFF05FCACE61154DDBBADF71      
+repoVisibility: public_0C3F0CE3E6E6448FAD341E7BFA50FCD333E06A20CFF05FCACE61154DDBBADF71
+description: Træfɪk, a modern reverse proxy
