@@ -26,7 +26,7 @@ cd traefik-library-image
 git add -A
 echo $VERSION | git commit --file -
 echo $VERSION | git tag -a $VERSION --file -
-git push -q --follow-tags -u origin master > /dev/null 2>&1
+git push -q --follow-tags -u origin main > /dev/null 2>&1
 
 cd ..
 rm -Rf traefik-library-image/
